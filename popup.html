@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Price Auto Converter</title>
+<style>
+  :root{--bg:#fff;--text:#111827;--muted:#5b6472;--line:#e3e6eb;--accent:#2563eb;--off:#9ca3af}
+  @media (prefers-color-scheme:dark){:root{--bg:#171a21;--text:#f3f4f6;--muted:#9aa3b2;--line:#2a2f3a;--accent:#60a5fa;--off:#4b5563}}
+  *{box-sizing:border-box}
+  body{margin:0;width:320px;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{padding:16px}
+  h1{font-size:16px;margin:0 0 2px}
+  #host{color:var(--muted);font-size:13px;word-break:break-all;margin-bottom:14px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .row label{font-weight:600;cursor:pointer}
+  .hint{color:var(--muted);font-size:13px;margin:0}
+  /* switch */
+  input.sw{appearance:none;-webkit-appearance:none;flex:none;width:44px;height:26px;border-radius:13px;background:var(--off);position:relative;cursor:pointer;transition:background .15s;margin:0}
+  input.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+  input.sw:checked{background:var(--accent)}
+  input.sw:checked::after{transform:translateX(18px)}
+  input.sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  input.sw:disabled{opacity:.5;cursor:not-allowed}
+  #status{padding:12px 0;border-top:1px solid var(--line)}
+  #bareBox{border-top:1px solid var(--line);padding:12px 0}
+  button.link[hidden]{display:none!important}
+  button.link{width:auto;border:0;padding:4px 0;margin:4px 0 0;color:var(--accent);text-decoration:underline;font-weight:600}
+  #bareBox .row{border:0;gap:8px}
+  #ratesBox{border-top:1px solid var(--line);padding:12px 0}
+  #ratesBox .hint.attn{margin-bottom:2px}
+  select{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;max-width:150px}
+  select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  button{font:inherit;font-weight:600;width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer;margin-top:4px}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .attn{background:#fef3c7;color:#78350f;border-radius:8px;padding:10px 12px}
+  @media (prefers-color-scheme:dark){.attn{background:#3b2a0a;color:#fde68a}}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Price Auto Converter</h1>
+  <div id="host">…</div>
+
+  <div class="row">
+    <label for="siteOn" id="siteLabel">Convert prices on this site</label>
+    <input type="checkbox" class="sw" id="siteOn" role="switch" disabled>
+  </div>
+
+  <div id="status" class="hint" role="status">Checking…</div>
+
+  <p class="hint" id="converterInfo" hidden style="padding:0 0 12px"></p>
+
+  <div id="bareBox" hidden>
+    <p class="hint" id="bareHint"></p>
+    <div class="row" id="bareRow" hidden style="padding-bottom:0">
+      <label for="bare">Currency</label>
+      <select id="bare"><option value="">Auto-detect</option></select>
+    </div>
+    <button id="bareChange" class="link" hidden>Change</button>
+  </div>
+
+  <div class="row">
+    <label for="target">Convert to</label>
+    <select id="target"></select>
+  </div>
+  <div class="row">
+    <label for="fee">Card fee buffer</label>
+    <select id="fee"></select>
+  </div>
+  <div id="ratesBox">
+    <p class="hint" id="ratesInfo">…</p>
+    <button id="refreshRates" class="link">Refresh rates</button>
+  </div>
+
+  <button id="settings">Settings</button>
+  <button id="diag" class="link" hidden style="display:block;margin:8px auto 0">Missed a price? Copy details</button>
+  <p class="hint" id="diagNote" style="text-align:center;margin-top:4px"></p>
+</div>
+<script src="lib.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

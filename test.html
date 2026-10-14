@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Price Auto Converter test page</title>
+<style>
+  body{font:17px/1.6 system-ui,sans-serif;max-width:720px;margin:32px auto;padding:0 16px;color:#111}
+  h2{margin-top:28px;font-size:18px}
+  .box{border:1px solid #ddd;border-radius:8px;padding:12px 16px;margin:8px 0}
+  button{font:inherit;padding:6px 12px;margin-right:8px}
+</style></head><body>
+<h1>Price Auto Converter — test page</h1>
+<p>Converted prices get a dotted underline. Hover one to see the original.</p>
+
+<h2>Symbols</h2>
+<div class="box">
+  Coffee $4.50 · Shoes US$1,299.00 · Laptop €899,00 · Watch 1.250,50 € · Bag £79.99 · Ramen ¥1,200 ·
+  Phone ₹45,999 · Hotel ₩120,000 · Taxi 1 234,56 zł · Meal RM12.50 · Rent Rp 4.500.000
+</div>
+
+<h2>Codes</h2>
+<div class="box">USD 50 · 50 USD · $5 CAD · EUR 1,200.50 · 300 JPY · THB 2,500</div>
+
+<h2>Big numbers and ranges</h2>
+<div class="box">Raised $1.2M last year, now valued at $5 billion. Tickets $10 - $20. Budget $5k.</div>
+
+<h2>Should NOT convert</h2>
+<div class="box">
+  Call 555-1234 · Date 2024-10-05 · TOP 10 lists · 5 ALL items · version 3.2.1<br>
+  <code>echo $5 &gt; file</code> · <input value="$25.00" aria-label="input"> · <textarea aria-label="t">$99</textarea>
+</div>
+
+<h2>Dynamic content</h2>
+<div class="box">
+  <p id="dyn">Total: $100.00</p>
+  <button id="upd">Change price (like a React update)</button>
+  <button id="add">Add new price</button>
+  <div id="added"></div>
+</div>
+
+<h2>Amazon-style split price</h2>
+<div class="box">
+  <span class="a-price" data-a-size="xl"><span class="a-offscreen">$19.99</span><span aria-hidden="true"><span class="a-price-symbol">$</span><span class="a-price-whole">19<span class="a-price-decimal">.</span></span><span class="a-price-fraction">99</span></span></span>
+</div>
+
+<script>
+  let n = 100;
+  document.getElementById('upd').onclick = () => {
+    n += 25;
+    document.getElementById('dyn').firstChild.nodeValue = 'Total: $' + n.toFixed(2);
+  };
+  document.getElementById('add').onclick = () => {
+    const p = document.createElement('p');
+    p.textContent = 'New item: $' + (Math.random() * 90 + 10).toFixed(2);
+    document.getElementById('added').appendChild(p);
+  };
+</script>
+</body></html>

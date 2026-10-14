@@ -1,0 +1,25 @@
+/* "This price was converted" cues. They are painted on top of the text and never change layout. */
+
+/* dotted underline: thin, neutral grey, works on light and dark pages */
+::highlight(pc-converted) {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #64748b;
+  text-decoration-thickness: 1px;
+}
+/* faint blue tint behind the price (about 14% opacity, so the text keeps its own colour) */
+::highlight(pc-tint) {
+  background-color: rgba(59, 130, 246, 0.14);
+}
+
+/* Same cues for split-price elements the extension rebuilds (e.g. Amazon). */
+[data-pc] { white-space: nowrap; }
+[data-pc~="u"] {
+  text-decoration: underline dotted #64748b;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+[data-pc~="t"] {
+  background-color: rgba(59, 130, 246, 0.14);
+  border-radius: 2px;
+}
