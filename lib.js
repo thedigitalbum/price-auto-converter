@@ -44,7 +44,7 @@ const PC = (() => {
     'ر.س': 'SAR', 'د.إ': 'AED', 'د.ك': 'KWD', 'ر.ق': 'QAR', 'د.ب': 'BHD', 'ج.م': 'EGP'
   };
   // Currency words (also what Chrome's page translation produces: 円 -> "yen"). Case-insensitive.
-  const WORD_CODE = { yen: 'JPY', yuan: 'CNY', rmb: 'CNY', baht: 'THB', euro: 'EUR', euros: 'EUR' };
+  const WORD_CODE = { yen: 'JPY', yuan: 'CNY', rmb: 'CNY', baht: 'THB', euro: 'EUR', euros: 'EUR', rand: 'ZAR', rands: 'ZAR' };
   const ci = (w) => [...w].map((c) => `[${c.toLowerCase()}${c.toUpperCase()}]`).join('');
 
   // 3-letter codes that are also common English words — never treated as currencies.
@@ -80,7 +80,7 @@ const PC = (() => {
 
   // Does this text mention a currency? Only real currencies count (a symbol, or a known 3-letter
   // code), so words like "OFF", "NEW" or "VAT" in "16% OFF" don't look like one.
-  const SYMBOL_CHARS = /[$€£¥₱₹₩₫฿₺₴₽₦₪円元원]|บาท|ر\.س|د\.إ|د\.ك|ر\.ق|د\.ب|ج\.م|(?<![A-Za-z])(?:yen|yuan|baht|euros?)(?![A-Za-z])/i;
+  const SYMBOL_CHARS = /[$€£¥₱₹₩₫฿₺₴₽₦₪円元원]|บาท|ر\.س|د\.إ|د\.ك|ر\.ق|د\.ب|ج\.م|(?<![A-Za-z])(?:yen|yuan|baht|euros?|rands?)(?![A-Za-z])/i;
   function hasCurrency(text, ctx) {
     if (SYMBOL_CHARS.test(text)) return true;
     for (const m of text.matchAll(/(?<![A-Za-z])[A-Z]{3}(?![A-Za-z])/g)) {

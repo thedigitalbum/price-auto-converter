@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3
+- The word "rand" (`1283 rand`) now identifies South African rand, so `R 1,283` converts on sites like takealot.com that have no .za address
+
 ## 1.0.2
 - Split prices now convert even when hidden screen-reader text sits next to them (bol.com cards)
 - Bare prices after a price word convert: `Adviesprijs 34,95`, `vanaf 43,47`, `from`, `ab`, `UVP` and similar
