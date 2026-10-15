@@ -191,7 +191,13 @@
 
   const PRICE_HINT = /price|money|amount|cost/i;
   const NOT_PRICE = /(^|[-_\s])(qty|quantity|count|rating|reviews?|stock|percent|phone|tel|zip)([-_\s]|$)/i;
-  const LABEL_PRICE = /^\s*(?:[A-Za-z][A-Za-z ]{0,24})?(?:price|total|subtotal)\s*:?\s*[\d.,\u00a0\u202f'’ ]+\s*$/i;
+  // "Sale price 150", "Adviesprijs 34,95", "vanaf 43,47": a price word right before a bare number.
+  // Words like "from"/"vanaf"/"ab" are only trusted when the number has decimals.
+  const LN = "[\\d.,\\u00a0\\u202f'\u2019 ]";
+  const LABEL_PRICE = new RegExp(
+    "^\\s*(?:[A-Za-z][A-Za-z ]{0,24})?(?:price|prijs|preis|prix|precio|total|subtotal)\\s*:?\\s*" + LN + "+\\s*$" +
+    "|^\\s*(?:[A-Za-z][A-Za-z ]{0,24})?(?:vanaf|from|desde|d[e\u00e8]s|uvp|vorher|voorheen|a partire da|\u00e0 partir de)\\s*:?\\s*" + LN + "*[.,]\\d{2}\\s*$" +
+    "|^\\s*(?:[A-Za-z][A-Za-z ]{0,24}[^A-Za-z])?(?:ab|od|was|now|only)\\s*:?\\s*" + LN + "*[.,]\\d{2}\\s*$", 'i');
 
   const REGION_CUR = {
     ae: 'AED', uae: 'AED', sa: 'SAR', ksa: 'SAR', saudi: 'SAR', qa: 'QAR', qatar: 'QAR', kw: 'KWD', bh: 'BHD',
@@ -691,12 +697,12 @@
 
   // A price with no currency shown, drawn in pieces: whole part, separator and cents in their own
   // elements ("13" "," "55"). Only this exact shape counts, so ratings, times and counts are safe.
-  const BARE_SPLIT = /(?:^|¦)(\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\d+[.,]\d{2})(?=¦|$)/g;
+  const BARE_SPLIT = /(?<![\d.,])(\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\d+[.,]\d{2})(?!\d|[.,]\d)/g;
   function bareSplit(spans, joined) {
     let done = false;
     BARE_SPLIT.lastIndex = 0;
     for (let m = BARE_SPLIT.exec(joined); m; m = BARE_SPLIT.exec(joined)) {
-      const start = m.index + m[0].length - m[1].length;
+      const start = m.index;
       const end = start + m[1].length;
       const inside = spans.filter((sp) => sp.start < end && sp.end > start);
       if (inside.length < 2) continue;                                  // inside one node: handled by convertNode

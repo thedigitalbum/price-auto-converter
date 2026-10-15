@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Price Auto Converter – Convert Prices to Your Currency",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Auto-detects prices on any site and converts them to your currency. Converted prices are marked, and hovering shows the original.",
   "minimum_chrome_version": "105",
   "permissions": [
