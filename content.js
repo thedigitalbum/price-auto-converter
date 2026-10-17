@@ -258,21 +258,34 @@
   }
 
   // Currencies written on the page itself; the clear winner is almost always the shop's currency.
+  let lastFams = {};   // ambiguous symbols seen while voting, e.g. { dollar: 40 }
   function voteCurrency() {
     const votes = { ...ctx.mentions };   // mentions already converted still count
     const vctx = { ...ctx, target: '' };
+    const info = {};
     let seen = 0;
     for (const root of textRoots()) {
       const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       for (let n = w.nextNode(); n && seen < 800; n = w.nextNode()) {
         const t = n.nodeValue;
+        // a lone "$" or "¥" in its own element (price drawn in pieces) still shows which symbol the shop uses
+        if (t.length < 4 && /^\s*[$¥￥]\s*$/.test(t) && !conv.has(n)) {
+          info.fams = info.fams || {};
+          const f = t.includes('$') ? 'dollar' : 'yen';
+          info.fams[f] = (info.fams[f] || 0) + 1;
+          continue;
+        }
         if (t.length > 300 || !/\d/.test(t) || conv.has(n) || grouped.has(n)) continue;
         const p = n.parentElement;
         if (!p || p.closest(SKIP)) continue;
         seen++;
-        for (const h of PC.find(t, vctx)) if (!h.amb) votes[h.from] = (votes[h.from] || 0) + 1;
+        for (const h of PC.find(t, vctx, info)) {
+          if (!h.amb) votes[h.from] = (votes[h.from] || 0) + 1;
+          else if (h.fam) { info.fams = info.fams || {}; info.fams[h.fam] = (info.fams[h.fam] || 0) + 1; }
+        }
       }
     }
+    lastFams = info.fams || {};
     const top = Object.entries(votes).sort((x, y) => y[1] - x[1]);
     if (!top.length || (top[1] && top[1][1] === top[0][1])) return '';
     return top[0][0];
@@ -313,12 +326,19 @@
       const dc = ok(el && (el.value || el.getAttribute('data-currency-code') || '').trim().toUpperCase());
       if (dc) return out(dc, 'the page’s data');
 
-      if (ctx) {
-        const v = ok(voteCurrency());
-        if (v) return out(v, 'currency written on the page');
-      }
       const labels = location.hostname.toLowerCase().split('.');
       const guess = (labels.length > 2 && REGION_CUR[labels[0]]) || REGION_CUR[labels[labels.length - 1]];
+      if (ctx) {
+        let v = ok(voteCurrency());
+        // A page full of "$" prices on a .com.ar / .mx / .cl... address: the address says which dollar.
+        // That beats a stray currency code in product text (e.g. "Ryzen 5 AMD").
+        if (v && guess && v !== guess && rates[guess]) {
+          const [fam, n] = Object.entries(lastFams).sort((a, b) => b[1] - a[1])[0] || ['', 0];
+          const members = (fam && PC.FAMILY[fam]) || [];
+          if (n >= 3 && members.includes(guess) && !members.includes(v)) v = '';
+        }
+        if (v) return out(v, 'currency written on the page');
+      }
       if (guess && rates[guess]) return out(guess, 'the site address');
       const lang = (document.documentElement.lang || '').toLowerCase().split(/[-_]/);
       const byRegion = REGION_CUR[lang[1]];

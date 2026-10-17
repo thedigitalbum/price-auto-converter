@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4
+- Fixed wrong site currency on Mercado Libre and similar shops: product text like "Ryzen 5 AMD" no longer counts as a price in Armenian dram, which made `$` prices convert as US dollars (far too high)
+- On pages full of `$` prices, the address now decides which dollar (.com.ar = peso, .com.mx = peso, .cl = peso...) over a stray currency code in the text
+- AMD, NAD, NIO and CRC are no longer read as currency codes
+
 ## 1.0.3
 - The word "rand" (`1283 rand`) now identifies South African rand, so `R 1,283` converts on sites like takealot.com that have no .za address
 

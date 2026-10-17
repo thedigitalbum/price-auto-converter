@@ -48,7 +48,7 @@ const PC = (() => {
   const ci = (w) => [...w].map((c) => `[${c.toLowerCase()}${c.toUpperCase()}]`).join('');
 
   // 3-letter codes that are also common English words — never treated as currencies.
-  const NOT_CODES = new Set(['ALL', 'TOP', 'TRY', 'CUP', 'MOP', 'PEN', 'MAD', 'SOS', 'GEL', 'BAM', 'LAK', 'ANG', 'BOB', 'DOP']);
+  const NOT_CODES = new Set(['ALL', 'TOP', 'TRY', 'CUP', 'MOP', 'PEN', 'MAD', 'SOS', 'GEL', 'BAM', 'LAK', 'ANG', 'BOB', 'DOP', 'AMD', 'NAD', 'NIO', 'CRC']);
 
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const byLen = (a, b) => b.length - a.length;
@@ -197,6 +197,7 @@ const PC = (() => {
       }
       if (!valid) {
         if (info && !code && ((tok[0] === '@' && tok !== '@rand') || g.dNum !== undefined)) info.unresolved = (info.unresolved || 0) + 1;
+        if (info && !code && tok[0] === '@') { info.fams = info.fams || {}; info.fams[tok.slice(1)] = (info.fams[tok.slice(1)] || 0) + 1; }
         RE.lastIndex = m.index + 1;
         continue;
       }
@@ -204,7 +205,7 @@ const PC = (() => {
       const amount = parseNum(numStr) * multiplier(mag);
       if (!Number.isFinite(amount) || amount <= 0) continue;   // skip 0.00 prices
       if (/^[ \u00a0]?%/.test(text.slice(end))) continue;      // "20%" is a percentage, not money
-      out.push({ start: m.index, end, text: text.slice(m.index, end), from: code, amount, neg, compact: !!mag && mag !== '万' && mag !== '億', amb: tok[0] === '@' });
+      out.push({ start: m.index, end, text: text.slice(m.index, end), from: code, amount, neg, compact: !!mag && mag !== '万' && mag !== '億', amb: tok[0] === '@', fam: tok[0] === '@' ? tok.slice(1) : '' });
     }
     return out;
   }
