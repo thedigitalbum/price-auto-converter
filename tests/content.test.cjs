@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const root = process.env.SOURCE_DIR || path.join(__dirname, '..');
-const browserReady = chromium.launch({ headless: true });
+const {browserOptions,verifyBrowser}=require('./browser.cjs');
+const browserReady = chromium.launch({ headless: true,...browserOptions() }).then(async b=>{await verifyBrowser(b);return b;});
 after(async () => (await browserReady).close());
 const rates = { USD: 1, PHP: 56, CAD: 1.4, MYR: 4, TRY: 40, NGN: 1600, CLP: 1000, COP: 4000, HKD: 8, EUR: 0.9, KWD: 0.3, PLN: 4 };
 async function fixture(t, body, { url = 'https://shop.example/', currency = 'USD' } = {}) {

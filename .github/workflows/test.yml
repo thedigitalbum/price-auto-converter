@@ -6,12 +6,19 @@ permissions:
   contents: read
 jobs:
   regression:
+    name: Chrome ${{ matrix.chrome }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chrome: [minimum, stable]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install-deps chromium
+      - name: Install official Chrome for Testing
+        run: python3 scripts/install_test_chrome.py ${{ matrix.chrome }}
       - run: npm test

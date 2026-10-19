@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
+const { browserOptions, verifyBrowser } = require("./browser.cjs");
 const root = process.env.SOURCE_DIR || path.join(__dirname, "..");
 
 test(
@@ -19,12 +20,14 @@ test(
     const context = await chromium.launchPersistentContext(
       fs.mkdtempSync(path.join(dir, "ui-profile-")),
       {
+        ...browserOptions(),
         channel: "chromium",
         headless: true,
         ignoreDefaultArgs: ["--disable-extensions"],
         acceptDownloads: true,
         downloadsPath: dir,
         args: [
+          ...(browserOptions().args || []),
           `--disable-extensions-except=${root}`,
           `--load-extension=${root}`,
           "--host-resolver-rules=MAP * ~NOTFOUND",
@@ -32,6 +35,7 @@ test(
       },
     );
     t.after(() => context.close());
+    await verifyBrowser(context);
     const errors = [];
     context.on("page", (p) => p.on("pageerror", (e) => errors.push(e.message)));
     t.after(() => assert.deepEqual(errors, []));

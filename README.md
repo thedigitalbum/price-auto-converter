@@ -39,17 +39,22 @@ No hosted logging service, API token, telemetry subscription or paid backend is 
 - Access denials, CAPTCHA, browser-internal pages and Web Store pages cannot be validated or converted normally. New site layouts can require fixes. Pause a site if conversion interferes with it.
 - Hover originals are a pointer interaction. A full screen-reader review of third-party shopping pages remains a release pilot item; automated accessibility checks cover the extension's own screens.
 
+## Chrome compatibility
+
+Desktop Google Chrome only. The declared minimum is **113.0.5672.63**, deliberately raised from the unverified 105 claim. The complete suite passed on official Chrome for Testing 113.0.5672.63 and 155.0.8059.84 on Windows. The historical Chromium development runs remain supplementary evidence, not a separate browser support target. See [Chrome version evidence](docs/CHROME_COMPATIBILITY.md).
+
 ## Development and validation
 
 Node.js 22 or newer:
 
 ```sh
 npm ci
-npx playwright install --with-deps chromium
+npx playwright install-deps chromium
+python3 scripts/install_test_chrome.py stable
 npm test
 ```
 
-The pinned development tools are not shipped in the extension. Tests cover parser boundaries and grouping, adversarial input, currency inference, separate price blocks, editable fields, split cents, dynamic updates/restoration, shadow DOM, storage, worker failures, report privacy/export, UI persistence, responsive layout and automated WCAG checks. Two tests load the actual unpacked extension into isolated Chromium profiles; no personal Chrome profile is modified. Fixtures use deterministic rates and no live network.
+The pinned development tools are not shipped in the extension. Tests cover parser boundaries and grouping, adversarial input, currency inference, separate price blocks, editable fields, split cents, dynamic updates/restoration, shadow DOM, storage, worker failures, report privacy/export, UI persistence, responsive layout and automated WCAG checks. Two tests load the actual unpacked extension into isolated Google Chrome profiles; no personal Chrome profile is modified. Fixtures use deterministic rates and no live network.
 
 `SOURCE_DIR` can point the suite at an extracted release package. `UI_SCREENSHOTS` optionally saves popup, settings and report previews. CI tests pull requests and pushes; the tag release workflow runs tests before packaging. Live shopping pages require separate testing because fixtures cannot prove compatibility with every layout.
 

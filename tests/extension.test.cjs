@@ -3,17 +3,20 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require('playwright');
+const {browserOptions,verifyBrowser}=require('./browser.cjs');
 const root = process.env.SOURCE_DIR || path.join(__dirname, '..');
 test('Actual unpacked extension: worker, content scripts, settings, and latest-price restore', { timeout: 45000 }, async t => {
   const testDir = path.join(__dirname, '..', 'test-results');
   fs.mkdirSync(testDir, { recursive: true });
   const profile = fs.mkdtempSync(path.join(testDir, 'extension-profile-'));
   const context = await chromium.launchPersistentContext(profile, {
+    ...browserOptions(),
     channel: 'chromium', headless: true, locale: 'en-US', ignoreDefaultArgs: ['--disable-extensions'],
     timeout: 15000,
-    args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`, '--host-resolver-rules=MAP * ~NOTFOUND']
+    args: [...(browserOptions().args||[]),`--disable-extensions-except=${root}`, `--load-extension=${root}`, '--host-resolver-rules=MAP * ~NOTFOUND']
   });
   t.after(() => context.close());
+  await verifyBrowser(context);
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker', { timeout: 10000 });
   // Wait for install's bundled-rate seeding before choosing deterministic test rates.
   await worker.evaluate(async () => {
