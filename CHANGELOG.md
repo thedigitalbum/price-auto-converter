@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 (release candidate)
+- Redesigned popup and Settings with a restrained Neo Tokyo palette, readable controls, clear rate freshness and keyboard focus
+- Added local JSON bug reports with preview, copy/download and a user-submitted GitHub issue flow; hostnames and price examples are optional, with no automatic uploads
+- Added bounded local error codes, privacy pages, support documentation and a GitHub issue template
+- Fixed subdomain toggles affecting sibling sites, overlapping setting writes and malformed saved preferences
+- Fixed partial currency/model matches, ambiguous `Ft` product dimensions and half-converted shared-label ranges
+- Country storefront evidence now beats stray currency-looking product text; explicit currency menus and product metadata retain priority
+- Split-price assembly no longer crosses separate semantic text blocks; editable fields and editor-contained Amazon prices are protected
+- Mutation scans avoid overlapping pending subtrees; reports use canonical shapes rather than scraped product prose
+- Provider freshness reflects provider timestamps; fallback seeding cannot overwrite a newly downloaded rate table
+- Expanded worker, parser, DOM, packaged-extension, UI, accessibility and privacy tests; pinned dependencies and test-gated release packaging
+
 ## 1.0.8
 - Fixed prices with spaces, Indian lakh grouping, three-decimal currencies and high-precision amounts; small conversions keep useful digits instead of rounding to zero
 - Fixed split superscript cents (Walmart / Liverpool), `29€99`, Turkish `TL`, Kenyan `KSh`, and leftover alphabetic currency labels such as `RM`

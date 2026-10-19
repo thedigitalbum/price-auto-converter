@@ -11,6 +11,7 @@ const PC = (() => {
     indicator: 'standard',  // 'standard' (≈ + tint + underline) | 'minimal' (underline) | 'tilde' (≈ only)
     whole: false,           // hide cents on amounts >= 10
     excluded: '',           // sites where the extension is off (one hostname per line)
+    included: '',           // more-specific exceptions to an excluded parent site
     debug: false,           // console diagnostics (off for everyone)
     siteCurrencies: ''      // lines like "afnan.com=AED": currency of symbol-less prices on that site
   };
@@ -69,10 +70,11 @@ const PC = (() => {
   const INVISIBLE = /[\u200e\u200f\u061c\u202a-\u202e\u2066-\u2069\u200b\ufeff]/g;
   const clean = (t) => t.replace(INVISIBLE, '').trim();
   const NEXT_NUM = new RegExp(`^${WS}{0,60}\\d`);
+  const RANGE_UPPER = new RegExp(`^\\s*(?:[-–—~〜～]|to)\\s*(${NUM})(?![A-Za-z0-9])`);
 
   const RE = new RegExp(
     // prefix form: $12.50 · USD 12.50 · $12.50 USD
-    `(?<![A-Za-z])(?:(?<pSym>${PRE})|(?<pCode>[A-Z]{3}))${SP}(?<pNeg>[-\u2212\u2013]\\s?)?(?<pNum>${NUM})(?<pMag>${MAG})?(?<pDash>[,.][-\u2013\u2014])?(?:${SP}(?<pTrail>[A-Z]{3})(?![A-Za-z0-9]))?` +
+    `(?<![A-Za-z0-9.,])(?:(?<pSym>${PRE})|(?<pCode>[A-Z]{3}))${SP}(?<pNeg>[-\u2212\u2013]\\s?)?(?<pNum>${NUM})(?<pMag>${MAG})?(?<pDash>[,.][-\u2013\u2014])?(?:${SP}(?<pTrail>[A-Z]{3})(?![A-Za-z0-9]))?(?![A-Za-z0-9])` +
     // suffix form: 12,50 € · 12.50 USD · 12$
     `|(?<![\\d.,])(?<sNum>${NUM_S})(?<sMag>${MAG})?(?:${SP}(?<sSym>${SUF})(?:(?<sCents>\\d{2})(?!\\d)|(?![\\dA-Za-z]))|(?<sDollar>\\$)(?!\\d)|${SP}(?<sWord>${WORDS})(?![A-Za-z])|${SP}(?<sCode>[A-Z]{3})(?![A-Za-z0-9]))` +
     // price marked only by a trailing dash: 1 299,-  (Norway, Denmark)  ·  25.–  (Switzerland)
@@ -195,7 +197,12 @@ const PC = (() => {
           if (/[.,]\d{1,2}$/.test(numStr)) continue;
           numStr += '.' + g.sCents;
         }
-        if (g.sSym) { tok = SUFFIX[g.sSym]; code = pick(tok); valid = known(code); }
+        if (g.sSym) {
+          tok = SUFFIX[g.sSym]; code = pick(tok); valid = known(code);
+          // "15 Ft" is often a product dimension in feet. Only trust forints
+          // when independent page/store evidence establishes HUF.
+          if (g.sSym === 'Ft' && ctx.bare !== 'HUF') valid = false;
+        }
         else if (g.sDollar) { tok = '@dollar'; code = pick(tok); valid = known(code); }
         else if (g.sWord) { code = WORD_CODE[g.sWord.toLowerCase()]; valid = known(code); }
         else {
@@ -215,6 +222,10 @@ const PC = (() => {
       const amount = parseNum(numStr, code) * multiplier(mag);
       if (!Number.isFinite(amount) || amount <= 0) continue;   // skip 0.00 prices
       if (/^[ \u00a0]?%/.test(text.slice(end))) continue;      // "20%" is a percentage, not money
+      // A shared-label range ($10–20) must not become half converted. Leave it
+      // intact until both endpoints can be represented with reliable boundaries.
+      const upper = RANGE_UPPER.exec(text.slice(end));
+      if (upper && !hasCurrency(text.slice(end, end + upper[0].length + 12), ctx)) continue;
       out.push({ start: m.index, end, text: text.slice(m.index, end), from: code, amount, neg, compact: !!mag && mag !== '万' && mag !== '億', amb: tok[0] === '@', fam: tok[0] === '@' ? tok.slice(1) : '' });
     }
     return out;
@@ -257,7 +268,7 @@ const PC = (() => {
 
   // chrome.storage.sync allows 8 KB per item: keep the user's lists well under that and
   // report failures instead of throwing.
-  const LIST_KEYS = ['excluded', 'siteCurrencies'];
+  const LIST_KEYS = ['excluded', 'included', 'siteCurrencies'];
   const MAX_LIST_BYTES = 6000;
   function tooBig(obj) {
     for (const k of LIST_KEYS) {
@@ -265,15 +276,45 @@ const PC = (() => {
     }
     return '';
   }
+  let saveQueue = Promise.resolve();
   async function saveSync(obj) {
     if (tooBig(obj)) return { ok: false, error: 'That list is too long to sync. Remove a few sites and try again.' };
     try {
-      await chrome.storage.sync.set(obj);
+      const task = saveQueue.then(() => chrome.storage.sync.set(obj));
+      saveQueue = task.catch(() => {});
+      await task;
       return { ok: true };
     } catch (e) {
       return { ok: false, error: String((e && e.message) || e) };
     }
   }
 
-  return { DEFAULTS, FAMILY, clean, hasCurrency, saveSync, tooBig, find, bare, isBareNumber, isFragment, render, rate, convert, formatMoney, formatRate, locale };
+  const hostLines = value => String(value || '').split('\n').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const hostMatches = (host, rule) => host === rule || host.endsWith('.' + rule);
+  function siteEnabled(host, cfg) {
+    const off = hostLines(cfg.excluded).filter(d => hostMatches(host, d)).sort((a,b) => b.length-a.length)[0] || '';
+    const on = hostLines(cfg.included).filter(d => hostMatches(host, d)).sort((a,b) => b.length-a.length)[0] || '';
+    return !off || on.length > off.length;
+  }
+  function toggleSite(host, cfg, enabled) {
+    // Only change this exact hostname; inherited parent rules stay intact for siblings.
+    let excluded = hostLines(cfg.excluded).filter(d => d !== host);
+    let included = hostLines(cfg.included).filter(d => d !== host);
+    if (enabled && !siteEnabled(host, { excluded: excluded.join('\n'), included: included.join('\n') })) included.push(host);
+    if (!enabled) excluded.push(host);
+    return { excluded: [...new Set(excluded)].join('\n'), included: [...new Set(included)].join('\n') };
+  }
+  function settings(raw = {}) {
+    const cfg = { ...DEFAULTS, ...raw };
+    cfg.target = /^[A-Z]{3}$/.test(cfg.target) ? cfg.target : DEFAULTS.target;
+    for (const key of ['enabled','whole','debug']) cfg[key] = typeof cfg[key] === 'boolean' ? cfg[key] : DEFAULTS[key];
+    cfg.fxBuffer = Number.isFinite(Number(cfg.fxBuffer)) ? Math.min(5, Math.max(0, Number(cfg.fxBuffer))) : 0;
+    cfg.indicator = ['standard','minimal','tilde'].includes(cfg.indicator) ? cfg.indicator : 'standard';
+    cfg.dollarMode = FAMILY.dollar.includes(cfg.dollarMode) ? cfg.dollarMode : 'auto';
+    cfg.yenMode = FAMILY.yen.includes(cfg.yenMode) ? cfg.yenMode : 'auto';
+    for (const key of LIST_KEYS) cfg[key] = typeof cfg[key] === 'string' ? cfg[key] : '';
+    return cfg;
+  }
+
+  return { DEFAULTS, FAMILY, clean, hasCurrency, saveSync, tooBig, find, bare, isBareNumber, isFragment, render, rate, convert, formatMoney, formatRate, locale, settings, hostLines, hostMatches, siteEnabled, toggleSite };
 })();

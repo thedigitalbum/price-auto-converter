@@ -24,7 +24,7 @@ test('Actual unpacked extension: worker, content scripts, settings, and latest-p
     await chrome.storage.local.set({ rates: { USD: 1, PHP: 56, CAD: 1.4 }, ratesBundled: false });
     await chrome.storage.sync.set({ enabled: true, target: 'PHP', fxBuffer: 0 });
   });
-  assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), '1.0.8');
+  assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), '1.1.0');
   const page = await context.newPage();
   await page.route('https://shop.example/**', route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><meta charset="utf-8"><meta name="currency" content="USD"><p id="price">USD 100</p><div class="a-price" id="az"><span class="a-offscreen">$19.99</span><span aria-hidden="true">$19.99</span></div>' }));
   await page.goto('https://shop.example/');

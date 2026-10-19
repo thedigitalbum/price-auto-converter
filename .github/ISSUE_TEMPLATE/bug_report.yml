@@ -1,0 +1,31 @@
+name: Report a conversion problem
+description: Wrong currency, missed prices, interface problems, or an extension error
+title: '[Bug] '
+body:
+  - type: markdown
+    attributes:
+      value: 'Issues are public. Review your report and omit private page, account or financial information.'
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and the result you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include a public example page only if you are comfortable sharing it.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic report
+      description: Paste the JSON from the extension’s Report a problem screen.
+      render: json
+  - type: input
+    id: version
+    attributes:
+      label: Extension version

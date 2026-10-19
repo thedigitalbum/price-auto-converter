@@ -4,7 +4,7 @@
   'use strict';
 
   const SKIP = 'script,style,noscript,textarea,input,select,option,code,pre,kbd,samp,svg,canvas,' +
-    '[contenteditable=""],[contenteditable="true"],[data-pc],#pc-tooltip-host,' +
+    '[contenteditable]:not([contenteditable="false"]),[data-pc],#pc-tooltip-host,' +
     '.rv-avg,.rv-cnt,[itemprop="ratingValue"],[itemprop="reviewCount"]';
   const canHighlight = typeof Highlight !== 'undefined' && !!(window.CSS && CSS.highlights);
 
@@ -142,7 +142,7 @@
     return (list || '').split('\n').map((x) => x.trim().toLowerCase()).filter(Boolean)
       .some((d) => host === d || host.endsWith('.' + d));
   }
-  const siteExcluded = () => hostIn(settings.excluded);
+  const siteExcluded = () => !PC.siteEnabled(location.hostname.toLowerCase(), settings);
 
   // ---------- the site's own currency converter ----------
   // Many shops (Shopify "currencies.js", Doubly, WooCommerce switchers, ...) convert prices
@@ -187,8 +187,8 @@
   // from the page itself, strongest evidence first:
   //   1. your own choice for the site (popup, optional)
   //   2. product/store data in the page (meta tags, JSON-LD, Shopify/WooCommerce settings)
-  //   3. currencies written elsewhere on the page ("Free delivery over AED 100")
-  //   4. the page language region (en-AE) or the site address (.ae, uae.example.com)
+  //   3. country storefront and site address (.ae, uae.example.com)
+  //   4. currency text elsewhere on the page, then the page language
   // A bare number is only converted when it sits in something that looks like a price.
 
   const PRICE_HINT = /price|money|amount|cost/i;
@@ -239,7 +239,7 @@
 
   function siteCurrencyOverride() {
     const host = location.hostname.toLowerCase();
-    for (const line of (settings.siteCurrencies || '').split('\n')) {
+    for (const line of (settings.siteCurrencies || '').split('\n').sort((a,b) => b.split('=')[0].length-a.split('=')[0].length)) {
       const [d, c] = line.split('=').map((x) => (x || '').trim());
       if (d && c && (host === d.toLowerCase() || host.endsWith('.' + d.toLowerCase())) && rates && rates[c.toUpperCase()]) {
         return c.toUpperCase();
@@ -260,34 +260,23 @@
   }
 
   // Currencies written on the page itself; the clear winner is almost always the shop's currency.
-  let lastFams = {};   // ambiguous symbols seen while voting, e.g. { dollar: 40 }
   function voteCurrency() {
     const votes = { ...ctx.mentions };   // mentions already converted still count
     const vctx = { ...ctx, target: '' };
-    const info = {};
     let seen = 0;
     for (const root of textRoots()) {
       const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       for (let n = w.nextNode(); n && seen < 800; n = w.nextNode()) {
         const t = n.nodeValue;
-        // a lone "$" or "¥" in its own element (price drawn in pieces) still shows which symbol the shop uses
-        if (t.length < 4 && /^\s*[$¥￥]\s*$/.test(t) && !conv.has(n)) {
-          info.fams = info.fams || {};
-          const f = t.includes('$') ? 'dollar' : 'yen';
-          info.fams[f] = (info.fams[f] || 0) + 1;
-          continue;
-        }
         if (t.length > 300 || !/\d/.test(t) || conv.has(n) || grouped.has(n)) continue;
         const p = n.parentElement;
         if (!p || p.closest(SKIP)) continue;
         seen++;
-        for (const h of PC.find(t, vctx, info)) {
+        for (const h of PC.find(t, vctx)) {
           if (!h.amb) votes[h.from] = (votes[h.from] || 0) + 1;
-          else if (h.fam) { info.fams = info.fams || {}; info.fams[h.fam] = (info.fams[h.fam] || 0) + 1; }
         }
       }
     }
-    lastFams = info.fams || {};
     const top = Object.entries(votes).sort((x, y) => y[1] - x[1]);
     if (!top.length || (top[1] && top[1][1] === top[0][1])) return '';
     return top[0][0];
@@ -344,18 +333,13 @@
         if (market) store = { cl: 'CLP', co: 'COP', pe: 'PEN' }[market[1].toLowerCase()];
       }
       if (ok(store)) return out(store, 'the store’s country');
+      // A country storefront is stronger evidence than a currency-looking product
+      // name. Explicit product data and an active currency menu already won above.
+      if (guess && rates[guess]) return out(guess, 'the site address');
       if (ctx) {
-        let v = ok(voteCurrency());
-        // A page full of "$" prices on a .com.ar / .mx / .cl... address: the address says which dollar.
-        // That beats a stray currency code in product text (e.g. "Ryzen 5 AMD").
-        if (v && guess && v !== guess && rates[guess]) {
-          const [fam, n] = Object.entries(lastFams).sort((a, b) => b[1] - a[1])[0] || ['', 0];
-          const members = (fam && PC.FAMILY[fam]) || [];
-          if (n >= 3 && members.includes(guess) && !members.includes(v)) v = '';
-        }
+        const v = ok(voteCurrency());
         if (v) return out(v, 'currency written on the page');
       }
-      if (guess && rates[guess]) return out(guess, 'the site address');
       const lang = (document.documentElement.lang || '').toLowerCase().split(/[-_]/);
       const byRegion = REGION_CUR[lang[1]];
       if (byRegion && rates[byRegion]) return out(byRegion, 'the page language');
@@ -412,6 +396,10 @@
 
   // Price metadata can arrive late (SPA, lazy scripts): keep trying a few times.
   function retryBare() {
+    return guardConversion(retryBareNow);
+  }
+
+  function retryBareNow() {
     lastBare = Date.now();
     bareTries++;
     if (!ctx || switching) return;
@@ -487,6 +475,19 @@
   // ---------- start / stop ----------
 
   function start() {
+    return guardConversion(startConversion);
+  }
+
+  function guardConversion(action) {
+    try { return action(); }
+    catch {
+      if (typeof DX !== 'undefined') DX.record('conversion_failed');
+      try { stop(); } catch { /* preserve the error state if restoring a removed node fails */ }
+      setState('error', 'Conversion paused after an error. Reload this page to try again.');
+    }
+  }
+
+  function startConversion() {
     stop();
     switching = false;
     const run = ++runId;
@@ -525,7 +526,7 @@
     // A site with its own currency converter may still be applying its saved currency right
     // after load. Give it a moment first, so it works from its own numbers and not from ours.
     siteConverter = detectConverter();
-    const begin = () => {
+    const begin = () => guardConversion(() => {
       if (run !== runId || !ctx || switching) return;
       scan(document.body);
       drain();
@@ -534,15 +535,13 @@
       observer = new MutationObserver(onMutations);
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
       if (document.head) observer.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['content'] });
-    };
+    });
     if (siteConverter) initTimer = setTimeout(begin, 1000); else begin();
     // web components often attach and fill their shadow trees a little after load: look again
     for (const ms of [800, 2500, 6000]) {
       setTimeout(() => {
         if (run !== runId || !ctx || switching || state !== 'active' || !observer) return;
-        scan(document.body);
-        drain();
-        syncBadge();
+        guardConversion(() => { scan(document.body); drain(); syncBadge(); });
       }, ms);
     }
     for (const ms of [1500, 4000]) {
@@ -718,7 +717,9 @@
   // Prices are often built from several elements ("AED" + "94.50", a "-" before it, a label
   // next to it, a struck-through old price beside the new one). Read the text of a small block
   // as one string, find the prices in it, and convert each price whose pieces are whole nodes.
-  const LIST_LIKE = /^(TABLE|TBODY|THEAD|TFOOT|TR|UL|OL|DL|SELECT)$/;
+  const LIST_LIKE = /^(HTML|BODY|MAIN|TABLE|TBODY|THEAD|TFOOT|TR|UL|OL|DL|SELECT)$/;
+  const semanticBlock = node => node.parentElement?.closest('p,li,td,th,article,section,h1,h2,h3,h4,h5,h6') || null;
+  const sameSemanticBlock = nodes => nodes.every(n => semanticBlock(n) === semanticBlock(nodes[0]));
   const needsSpace = (a, b) => (/[A-Za-z]/.test(a) && /[A-Za-z0-9]/.test(b)) || (/\d/.test(a) && /[A-Za-z0-9]/.test(b));   // keeps "Qty 2" and "99.00" apart
 
   function convertSplit(node) {
@@ -755,6 +756,7 @@
       const end = start + m[1].length;
       const inside = spans.filter((sp) => sp.start < end && sp.end > start);
       if (inside.length < 2) continue;                                  // inside one node: handled by convertNode
+      if (!sameSemanticBlock(inside.map(s => s.node))) continue;
       if (inside.some((sp) => sp.start < start || sp.end > end)) continue;
       if (inside.some((sp) => conv.has(sp.node) || grouped.has(sp.node) || blocked(sp.node))) continue;
       if (!inside.some((sp) => priceLike(sp.node))) continue;
@@ -794,6 +796,7 @@
       for (const h of PC.find(joined, ctx)) {
         const inside = spans.filter((s) => s.start < h.end && s.end > h.start);
         if (inside.length < 2) continue;                  // inside one node: handled by convertNode
+        if (!sameSemanticBlock(inside.map(s => s.node))) continue;
         if (inside.some((s) => s.start < h.start || s.end > h.end)) continue;   // would cut a node's text
         if (inside.some((s) => conv.has(s.node) || grouped.has(s.node) || blocked(s.node))) continue;
         applySplit(inside.map((s) => s.node), h);
@@ -817,6 +820,7 @@
 
   // Do two nodes sit in the same small block (so they belong to the same line of the page)?
   function sameBlock(a, b) {
+    if (!sameSemanticBlock([a,b])) return false;
     let el = a.parentElement;
     for (let i = 0; el && i < 7; i++, el = el.parentElement) {
       if (el.contains(b)) return !LIST_LIKE.test(el.tagName) && textUpTo(el, 300) !== null;
@@ -930,7 +934,7 @@
 
   // Amazon splits prices into separate <span>s ("$" "19" "99"); rebuild the visible part.
   function convertAmazon(el) {
-    if (!ctx) return;
+    if (!ctx || el.closest(SKIP)) return;
     const off = el.querySelector('.a-offscreen');
     const vis = el.querySelector(':scope > [aria-hidden="true"]');
     if (!off || !vis) return;
@@ -948,7 +952,7 @@
     const hits = PC.find(t, ctx);
     if (hits.length !== 1 || hits[0].start !== 0 || hits[0].end !== t.length) return;
     const shown = PC.render(hits[0], ctx);
-    const record = { off, offText: off.textContent, vis, visNodes: Array.from(vis.childNodes), shown, marker: null };
+    const record = { off, offText: off.textContent, from: hits[0].from, vis, visNodes: Array.from(vis.childNodes), shown, marker: null };
     azSaved.set(el, record);
     el.setAttribute('data-pc-az', '');
     off.textContent = shown;
@@ -978,7 +982,7 @@
     for (const m of list) {
       if (m.type === 'characterData') pending.add(m.target);
       else {
-        pending.add(m.target);
+        if (m.target.nodeType === 1 && (m.target.closest('.a-price') || textUpTo(m.target, 300) !== null)) pending.add(m.target);
         for (const n of m.addedNodes) if (n.nodeType === 1 || n.nodeType === 3) pending.add(n);
       }
     }
@@ -986,13 +990,23 @@
   }
 
   function flush() {
+    guardConversion(flushPending);
+  }
+
+  function flushPending() {
     flushTimer = null;
     if (switching) return;
     if (ctx && bareTries < 8 && Date.now() - lastBare > 2000) retryBare();
     if (!ctx || !observer) return;
     const nodes = [...pending];
+    const pendingRoots = new Set(nodes);
     pending.clear();
-    for (const n of nodes) if (n.isConnected) scan(n);
+    for (const n of nodes) {
+      if (!n.isConnected) continue;
+      let covered = false;
+      for (let p = n.parentNode; p; p = p.parentNode) if (pendingRoots.has(p)) { covered = true; break; }
+      if (!covered) scan(n);
+    }
     drain();                                          // ignore the changes we just made
     for (const [n] of conv) if (!n.isConnected) forget(n);
     for (const [el] of azSaved) if (!el.isConnected) azSaved.delete(el);
@@ -1123,6 +1137,7 @@
       for (const k of Object.keys(changes)) {
         settings[k] = changes[k].newValue !== undefined ? changes[k].newValue : PC.DEFAULTS[k];
       }
+      settings = PC.settings(settings);
     } else if (area === 'local') {
       if (!changes.rates) return;
       rates = changes.rates.newValue || null;
@@ -1141,93 +1156,64 @@
         chrome.storage.sync.get(PC.DEFAULTS),
         chrome.storage.local.get(['rates', 'ratesBundled'])
       ]);
-      settings = { ...PC.DEFAULTS, ...s };
+      settings = PC.settings(s);
       rates = l.rates || null;
       ratesApprox = !!l.ratesBundled;
       chrome.storage.onChanged.addListener(onStorage);
       if (!rates) chrome.runtime.sendMessage({ type: 'refresh-rates' }).catch(() => {});
       start();
     } catch (e) {
-      /* extension was reloaded while this page was open — refresh the page */
+      if (alive()) {
+        if (typeof DX !== 'undefined') DX.record('storage_unavailable');
+        setState('error', 'Could not read extension data. Reload the page to try again.');
+      }
     }
   }
 
-  // ---------- "Missed a price?" helper ----------
-  // Describes prices that were NOT converted (tag names, class names and short price text only)
-  // so the visitor can copy it and send it for a fix. Nothing leaves the browser by itself.
-  function skeleton(n, depth = 0) {
-    if (n.nodeType === 3) { const t = n.nodeValue.trim(); return t ? t.slice(0, 40) : ''; }
-    if (n.nodeType !== 1 || depth > 5) return '';
-    const cls = (typeof n.className === 'string' ? n.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 3).join('.');
-    return `<${n.tagName.toLowerCase()}${cls ? '.' + cls : ''}>${Array.from(n.childNodes).map((c) => skeleton(c, depth + 1)).join('')}</>`;
-  }
-
-  function diagnose() {
-    const rows = [];
-    if (ctx) {
-      // group look-alikes ("4.3", "4.4"... star ratings; "5.4K", "468"... review counts) into one row
-      const strong = new Map();
-      const weak = new Map();
-      let seen = 0;
-      const allNodes = [];
-      for (const root of textRoots()) {
-        const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        for (let n = w.nextNode(); n && allNodes.length < 6000; n = w.nextNode()) allNodes.push(n);
-      }
-      for (const n of allNodes) {
-        seen++;
-        const t = n.nodeValue.trim();
-        if (!t || t.length > 60 || conv.has(n) || grouped.has(n)) continue;
-        if (isZeroNum(PC.clean(t)) || (isCurrencyOnly(PC.clean(t)) && zeroBeside(n))) continue;   // free items are skipped on purpose
-        if (!/\d/.test(t) && !PC.isFragment(t)) continue;
-        const p = n.parentElement;
-        if (!p || p.closest(SKIP) || t.includes(ctx.target) || t.includes('%')) continue;
-        const likely = (PC.hasCurrency(t, ctx) && /\d/.test(t)) || isCurrencyOnly(t) || (PC.isBareNumber(t) && !!priceLike(n));
-        if (!likely && !PC.isBareNumber(t)) continue;   // plain numbers are listed last
-        let box = p;
-        for (let i = 0; i < 3 && box.parentElement && box.parentElement !== document.body && textUpTo(box.parentElement, 160) !== null; i++) box = box.parentElement;
-        const sk = skeleton(box);
-        const key = sk.replace(/\d+/g, '#');
-        const bucket = likely ? strong : weak;
-        if (bucket.has(key)) bucket.get(key).n++; else bucket.set(key, { sk, n: 1 });
-      }
-      const fmt = ({ sk, n }) => (n > 1 ? `${sk}   (x${n} similar)` : sk);
-      rows.push(...[...strong.values()].slice(0, 12).map(fmt));
-      const rest = Math.max(0, 12 - rows.length);
-      if (rest) rows.push(...[...weak.values()].slice(0, Math.min(rest, 6)).map((x) => 'plain number (probably not a price): ' + fmt(x)));
+  // Structured diagnostics: no page prose, HTML, address paths, or form values.
+  function reportContext(includeExamples = false) {
+    const shapes = new Set();
+    const shapeOf = node => {
+      const el = node.parentElement;
+      if (!el) return;
+      const classes = [...new Set(String(typeof el.className === 'string' ? el.className : '').split(/\s+/)
+        .map(c => /^(price|money|amount|currency|cost|sale|total|cents|fraction|whole|value)(?:[-_]|$)/i.exec(c)?.[1]?.toLowerCase()).filter(Boolean))].slice(0,2);
+      shapes.add(el.tagName.toLowerCase() + classes.map(c => '.' + c.toLowerCase()).join(''));
+    };
+    if (ctx) for (const node of [...ctx.skipped, ...ctx.missed, ...conv.keys()]) {
+      if (shapes.size >= 8) break;
+      if (node.isConnected) shapeOf(node);
     }
-    let mf = {};
-    try { mf = chrome.runtime.getManifest(); } catch (e) { /* ignore */ }
-    // the exchange rate in use (no page content), so a wrong-looking number can be checked against it
-    const extra = [];
-    try {
-      const from = ctx && ctx.bare;
-      if (from && ctx.rates && ctx.rates[from] && ctx.rates[settings.target]) {
-        const r = ctx.rates[settings.target] / ctx.rates[from];
-        extra.push(`rate: 1 ${from} = ${r.toFixed(r < 1 ? 5 : 3)} ${settings.target} (${ratesApprox ? 'built-in approximate rates' : 'live rates'})`);
-      }
-    } catch (e) { /* the report still works without these lines */ }
-    return [
-      `${BRAND} ${mf.version || ''}`.trim(),
-      `site: ${location.hostname}`,
-      `state: ${state}${stateReason ? ' (' + stateReason + ')' : ''}; target ${settings.target}; fee ${Number(settings.fxBuffer) || 0}%`,
-      `site currency: ${ctx && ctx.bare ? ctx.bare + ' (' + ctx.bareSource + ')' : 'not detected'}; converted ${convertedCount()}; skipped-unknown ${ctx ? ctx.skipped.size : 0}`,
-      `site converter: ${siteConverter || 'none'}`,
-      ...extra,
-      `not converted (${rows.length}):`,
-      ...rows.map((r, i) => `${i + 1}. ${r}`)
-    ].join('\n');
+    const examples = [];
+    const usedCurrencies = new Set();
+    for (const entry of conv.values()) for (const part of entry.parts) usedCurrencies.add(part.from);
+    for (const entry of azSaved.values()) usedCurrencies.add(entry.from);
+    if (includeExamples) for (const entry of conv.values()) {
+      for (const part of entry.parts) if (examples.length < 5) examples.push(String(part.orig).slice(0,50));
+      if (examples.length >= 5) break;
+    }
+    if (includeExamples) for (const entry of azSaved.values()) {
+      if (examples.length >= 5) break;
+      examples.push(entry.offText.slice(0,50));
+    }
+    return { host: location.hostname.toLowerCase(), state, count: convertedCount(), target: settings.target,
+      bare: ctx?.bare || '', bareSource: ctx?.bareSource || '',
+      bareSkipped: ctx ? [...ctx.skipped].filter(n => n.isConnected && !conv.has(n) && !grouped.has(n)).length : 0,
+      missed: ctx ? [...ctx.missed].filter(n => n.isConnected).length : 0,
+      sym: ctx?.sym || null, fee: ctx?.fee || 0, converter: siteConverter,
+      offersTarget: siteConverter ? offersTarget() : false,
+      effectiveRate: ctx?.bare && ctx.rates[ctx.bare] ? PC.rate(ctx.bare, ctx) : null,
+      ratesUsed: ctx ? [...usedCurrencies].filter(c => ctx.rates[c]).slice(0,12).map(from => ({from,to:ctx.target,rate:PC.rate(from,ctx)})) : [],
+      shapes: [...shapes], ...(includeExamples ? { examples } : {}) };
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (sender.id === chrome.runtime.id && msg && msg.type === 'diagnose') {
-      sendResponse({ text: diagnose() });
+      sendResponse({ text: JSON.stringify(reportContext(false), null, 2) });
       return;
     }
-    if (sender.id === chrome.runtime.id && msg && msg.type === 'status') {
-      sendResponse({ host: location.hostname.toLowerCase(), state, reason: stateReason, count: convertedCount(), target: settings.target, bare: ctx ? ctx.bare : '', bareSource: ctx ? ctx.bareSource : '', bareSkipped: ctx ? ctx.skipped.size : 0, missed: ctx ? ctx.missed.size : 0,
-        sym: ctx ? ctx.sym : null, fee: ctx ? ctx.fee : 0,
-        converter: siteConverter, offersTarget: siteConverter ? offersTarget() : false });
+    if (sender.id === chrome.runtime.id && msg && (msg.type === 'status' || msg.type === 'report-context')) {
+      sendResponse(reportContext(msg.type === 'report-context' && msg.includeExamples === true));
     }
   });
 

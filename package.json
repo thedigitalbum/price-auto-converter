@@ -1,11 +1,14 @@
 {
   "name": "price-auto-converter",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/lib.test.cjs tests/content.test.cjs tests/extension.test.cjs",
+    "test": "node --test tests/lib.test.cjs tests/audit.test.cjs tests/content.test.cjs tests/background.test.cjs tests/diagnostics.test.cjs tests/ui.test.cjs tests/extension.test.cjs",
     "test:unit": "node --test tests/lib.test.cjs",
-    "test:browser": "node --test tests/content.test.cjs tests/extension.test.cjs"
+    "test:browser": "node --test tests/content.test.cjs tests/ui.test.cjs tests/extension.test.cjs"
   },
-  "devDependencies": { "playwright": "1.62.1" }
+  "devDependencies": {
+    "axe-core": "4.10.3",
+    "playwright": "1.62.1"
+  }
 }
