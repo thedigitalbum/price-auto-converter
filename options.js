@@ -1,3 +1,4 @@
+try { document.getElementById('ver').textContent = 'Version ' + chrome.runtime.getManifest().version; } catch (e) { /* version label is optional */ }
 // Copyright (c) 2026 Harry Rama. MIT License (see LICENSE).
 const $ = (id) => document.getElementById(id);
 const COMMON = ['USD', 'EUR', 'GBP', 'JPY', 'PHP', 'CAD', 'AUD', 'SGD', 'HKD', 'CNY', 'KRW', 'INR', 'THB', 'MYR', 'IDR', 'VND', 'AED', 'CHF'];

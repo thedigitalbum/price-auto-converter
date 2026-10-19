@@ -27,7 +27,7 @@ const PC = (() => {
   // Symbols that appear BEFORE the number. '@name' = ambiguous, resolved per page via ctx.sym.
   const PREFIX = {
     'US$': 'USD', 'CA$': 'CAD', 'AU$': 'AUD', 'NZ$': 'NZD', 'HK$': 'HKD', 'NT$': 'TWD', 'MX$': 'MXN',
-    'R$': 'BRL', 'C$': 'CAD', 'A$': 'AUD', 'S$': 'SGD', 'Rp': 'IDR', 'RM': 'MYR',
+    'R$': 'BRL', 'C$': 'CAD', 'A$': 'AUD', 'S$': 'SGD', 'Rp': 'IDR', 'RM': 'MYR', 'TL': 'TRY', 'KSh': 'KES',
     '€': 'EUR', '£': 'GBP', '₱': 'PHP', '₹': 'INR', '₩': 'KRW', '₫': 'VND', '฿': 'THB',
     '₺': 'TRY', '₴': 'UAH', '₽': 'RUB', '₦': 'NGN', '₪': 'ILS', '₡': 'CRC', '₲': 'PYG',
     '₸': 'KZT', '₼': 'AZN', '₾': 'GEL', '៛': 'KHR', '₭': 'LAK', '₮': 'MNT',
@@ -38,7 +38,7 @@ const PC = (() => {
   const SUFFIX = {
     '€': 'EUR', '£': 'GBP', '₱': 'PHP', '₹': 'INR', '₩': 'KRW', '₫': 'VND', '฿': 'THB',
     '₺': 'TRY', '₴': 'UAH', '₽': 'RUB', '₦': 'NGN', '₪': 'ILS',
-    'zł': 'PLN', 'Kč': 'CZK', 'Ft': 'HUF', '$': '@dollar',
+    'zł': 'PLN', 'Kč': 'CZK', 'Ft': 'HUF', 'TL': 'TRY', 'KSh': 'KES', '$': '@dollar',
     'kr.': '@krona', 'kr': '@krona', 'Rs.': '@rupee', 'Rs': '@rupee', 'Fr.': 'CHF',
     '円': 'JPY', '元': 'CNY', '원': 'KRW', 'บาท': 'THB',
     'ر.س': 'SAR', 'د.إ': 'AED', 'د.ك': 'KWD', 'ر.ق': 'QAR', 'د.ب': 'BHD', 'ج.م': 'EGP'
@@ -56,9 +56,11 @@ const PC = (() => {
   const SUF = Object.keys(SUFFIX).filter((k) => k !== '$').sort(byLen).map(esc).join('|');
   const WORDS = Object.keys(WORD_CODE).sort(byLen).map(ci).join('|');
 
-  const NUM = String.raw`(?:\d{1,3}(?:[,.\u00a0\u202f'’]\d{3})+|\d+)(?:[.,]\d{1,2})?`;
+  // Consume complete numbers, including Indian grouping and high-precision prices.
+  // The boundary prevents a failed match from converting only the start of an amount.
+  const NUM = String.raw`(?:\d{1,3}(?:[,.\u00a0\u202f'’ ]\d{3})+(?:[.,]\d+)?|\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d+)?|\d+(?:[.,]\d+)?)(?!\d|[.,]\d)`;
   // Number-then-symbol form ("1 234,56 zł") may also use a plain space as thousands separator.
-  const NUM_S = String.raw`(?:\d{1,3}(?:[,.\u00a0\u202f'’ ]\d{3})+|\d+)(?:[.,]\d{1,2})?`;
+  const NUM_S = NUM;
   const MAG = String.raw`(?:(?:[kKmMbB]|bn|mn)\b|\s(?:million|billion|thousand)\b|万|億)`;
   // Whitespace as found in real pages: long indented runs from the page source, and the invisible
   // direction marks Arabic/English sites sprinkle around prices (LRM, RLM, zero-width space...).
@@ -72,7 +74,7 @@ const PC = (() => {
     // prefix form: $12.50 · USD 12.50 · $12.50 USD
     `(?<![A-Za-z])(?:(?<pSym>${PRE})|(?<pCode>[A-Z]{3}))${SP}(?<pNeg>[-\u2212\u2013]\\s?)?(?<pNum>${NUM})(?<pMag>${MAG})?(?<pDash>[,.][-\u2013\u2014])?(?:${SP}(?<pTrail>[A-Z]{3})(?![A-Za-z0-9]))?` +
     // suffix form: 12,50 € · 12.50 USD · 12$
-    `|(?<![\\d.,])(?<sNum>${NUM_S})(?<sMag>${MAG})?(?:${SP}(?<sSym>${SUF})(?![\\dA-Za-z])|(?<sDollar>\\$)(?!\\d)|${SP}(?<sWord>${WORDS})(?![A-Za-z])|${SP}(?<sCode>[A-Z]{3})(?![A-Za-z0-9]))` +
+    `|(?<![\\d.,])(?<sNum>${NUM_S})(?<sMag>${MAG})?(?:${SP}(?<sSym>${SUF})(?:(?<sCents>\\d{2})(?!\\d)|(?![\\dA-Za-z]))|(?<sDollar>\\$)(?!\\d)|${SP}(?<sWord>${WORDS})(?![A-Za-z])|${SP}(?<sCode>[A-Z]{3})(?![A-Za-z0-9]))` +
     // price marked only by a trailing dash: 1 299,-  (Norway, Denmark)  ·  25.–  (Switzerland)
     `|(?<![\\d.,])(?<dNum>${NUM_S})(?<dMark>[,.][-\u2013\u2014])(?!\\d)`,
     'g'
@@ -81,8 +83,9 @@ const PC = (() => {
   // Does this text mention a currency? Only real currencies count (a symbol, or a known 3-letter
   // code), so words like "OFF", "NEW" or "VAT" in "16% OFF" don't look like one.
   const SYMBOL_CHARS = /[$€£¥₱₹₩₫฿₺₴₽₦₪円元원]|บาท|ر\.س|د\.إ|د\.ك|ر\.ق|د\.ب|ج\.م|(?<![A-Za-z])(?:yen|yuan|baht|euros?|rands?)(?![A-Za-z])/i;
+  const CURRENCY_TOKEN = new RegExp(`(?<![A-Za-z])(?:${PRE}|${SUF})(?![A-Za-z])`);
   function hasCurrency(text, ctx) {
-    if (SYMBOL_CHARS.test(text)) return true;
+    if (SYMBOL_CHARS.test(text) || CURRENCY_TOKEN.test(text)) return true;
     for (const m of text.matchAll(/(?<![A-Za-z])[A-Z]{3}(?![A-Za-z])/g)) {
       if (ctx.rates[m[0]] !== undefined && !NOT_CODES.has(m[0])) return true;
     }
@@ -91,7 +94,7 @@ const PC = (() => {
 
   // Text that could be one half of a split price: just a currency symbol/code, or just a number.
   const FRAG_SYM = new RegExp(`^${WS}*(?:${PRE}|${SUF}|${WORDS}|[A-Z]{3})${WS}*$`);
-  const FRAG_NUM = new RegExp(`^${WS}*${NUM}(?:${MAG})?${WS}*$`);
+  const FRAG_NUM = new RegExp(`^${WS}*(?:${NUM}|${NUM_S})(?:${MAG})?${WS}*$`);
   const isFragment = (t) => t.length < 30 && (FRAG_SYM.test(t) || FRAG_NUM.test(t));
 
   // A price shown as a bare number ("150") on a page whose currency is known from elsewhere.
@@ -100,12 +103,12 @@ const PC = (() => {
   function bare(text, from, ctx) {
     const m = BARE.exec(text);
     if (!m || !ctx.rates[from] || from === ctx.target) return null;
-    const amount = parseNum(m[2]);
+    const amount = parseNum(m[2], from);
     if (!Number.isFinite(amount) || amount <= 0) return null;
     return { start: m[1].length, end: m[1].length + m[2].length, text: m[2], label: from + ' ' + m[2], from, amount, compact: false };
   }
 
-  function parseNum(raw) {
+  function parseNum(raw, code) {
     const s = raw.replace(/[\u00a0\u202f' ’]/g, '');
     const d = s.lastIndexOf('.');
     const c = s.lastIndexOf(',');
@@ -117,7 +120,8 @@ const PC = (() => {
       const parts = s.split(sep);
       const tail = parts[parts.length - 1];
       // one separator: decimal unless it looks like a thousands group ("1,234")
-      if (parts.length === 2 && (tail.length !== 3 || /^0+$/.test(parts[0]))) dec = sep;
+      const threeDecimals = ['KWD', 'BHD', 'OMR', 'JOD', 'TND', 'LYD', 'IQD'].includes(code);
+      if (parts.length === 2 && (tail.length !== 3 || /^0+$/.test(parts[0]) || (threeDecimals && sep === '.'))) dec = sep;
     }
     let t = s;
     if (dec) {
@@ -160,6 +164,8 @@ const PC = (() => {
       let valid;
       if (g.pNum !== undefined) {
         numStr = g.pNum; mag = g.pMag; neg = g.pNeg ? g.pNeg.trim() : '';   // "AED -25.00"
+        // RM-9595 is a model number; alphabetic currency labels require a space before a minus.
+        if (g.pSym && /^[A-Za-z.]+$/.test(g.pSym) && neg && text.slice(m.index + g.pSym.length).startsWith(neg)) continue;
         if (g.pSym) {
           tok = PREFIX[g.pSym]; code = pick(tok); valid = known(code);
           // South African / Nordic prices use a plain space for thousands: "R 1 299.00", "kr 1 299"
@@ -185,6 +191,10 @@ const PC = (() => {
         code = ctx.bare || ''; valid = known(code);
       } else {
         numStr = g.sNum; mag = g.sMag;
+        if (g.sCents) {
+          if (/[.,]\d{1,2}$/.test(numStr)) continue;
+          numStr += '.' + g.sCents;
+        }
         if (g.sSym) { tok = SUFFIX[g.sSym]; code = pick(tok); valid = known(code); }
         else if (g.sDollar) { tok = '@dollar'; code = pick(tok); valid = known(code); }
         else if (g.sWord) { code = WORD_CODE[g.sWord.toLowerCase()]; valid = known(code); }
@@ -202,7 +212,7 @@ const PC = (() => {
         continue;
       }
       if (code === target) continue;               // already in the target currency
-      const amount = parseNum(numStr) * multiplier(mag);
+      const amount = parseNum(numStr, code) * multiplier(mag);
       if (!Number.isFinite(amount) || amount <= 0) continue;   // skip 0.00 prices
       if (/^[ \u00a0]?%/.test(text.slice(end))) continue;      // "20%" is a percentage, not money
       out.push({ start: m.index, end, text: text.slice(m.index, end), from: code, amount, neg, compact: !!mag && mag !== '万' && mag !== '億', amb: tok[0] === '@', fam: tok[0] === '@' ? tok.slice(1) : '' });
@@ -219,6 +229,7 @@ const PC = (() => {
     let o = base;
     if (opts.compact) o = { ...base, notation: 'compact', minimumFractionDigits: 0, maximumFractionDigits: 1 };
     else if (opts.whole && Math.abs(value) >= 10) o = { ...base, minimumFractionDigits: 0, maximumFractionDigits: 0 };
+    else if (value !== 0 && Math.abs(value) < 1) o = { ...base, maximumSignificantDigits: 4 };
     try {
       return new Intl.NumberFormat(opts.locale || locale(), o).format(value);
     } catch {

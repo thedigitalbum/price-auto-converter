@@ -4,7 +4,8 @@
   'use strict';
 
   const SKIP = 'script,style,noscript,textarea,input,select,option,code,pre,kbd,samp,svg,canvas,' +
-    '[contenteditable=""],[contenteditable="true"],[data-pc],#pc-tooltip-host';
+    '[contenteditable=""],[contenteditable="true"],[data-pc],#pc-tooltip-host,' +
+    '.rv-avg,.rv-cnt,[itemprop="ratingValue"],[itemprop="reviewCount"]';
   const canHighlight = typeof Highlight !== 'undefined' && !!(window.CSS && CSS.highlights);
 
   let settings = { ...PC.DEFAULTS };
@@ -110,6 +111,7 @@
   let siteConverter = '';   // why we think the site has its own currency converter ('' = it doesn't)
   let initTimer = null;
   let reapplyTimer = null;
+  let switching = false;
   let lastBare = 0;
   let bareTries = 0;
 
@@ -190,7 +192,7 @@
   // A bare number is only converted when it sits in something that looks like a price.
 
   const PRICE_HINT = /price|money|amount|cost/i;
-  const NOT_PRICE = /(^|[-_\s])(qty|quantity|count|rating|reviews?|stock|percent|phone|tel|zip)([-_\s]|$)/i;
+  const NOT_PRICE = /(^|[-_\s])(qty|quantity|count|ratings?|reviews?|rv|score|stock|percent|phone|tel|zip)([-_\s]|$)/i;
   // "Sale price 150", "Adviesprijs 34,95", "vanaf 43,47": a price word right before a bare number.
   // Words like "from"/"vanaf"/"ab" are only trusted when the number has decimals.
   const LN = "[\\d.,\\u00a0\\u202f'\u2019 ]";
@@ -298,6 +300,11 @@
     const o = siteCurrencyOverride();
     if (o) return out(o, 'your choice');
     try {
+      // The active selector describes displayed prices, unlike stale product data.
+      for (const el of document.querySelectorAll('select[name*="currency" i],select[id*="currency" i]')) {
+        const c = ok(String(el.value || '').toUpperCase());
+        if (c) return out(c, 'the site’s currency menu');
+      }
       for (const sel of ['meta[property="product:price:currency"]', 'meta[property="og:price:currency"]',
         'meta[property="og:currency"]', 'meta[name="currency"]',
         'meta[itemprop="priceCurrency"]', '[itemprop="priceCurrency"]']) {
@@ -328,6 +335,15 @@
 
       const labels = location.hostname.toLowerCase().split('.');
       const guess = (labels.length > 2 && REGION_CUR[labels[0]]) || REGION_CUR[labels[labels.length - 1]];
+      const host = location.hostname.toLowerCase().replace(/^www\./, '');
+      let store = '';
+      if (host === 'mercadolibre.com.co') store = 'COP';
+      if (host === 'hktvmall.com') store = 'HKD';
+      if (host === 'falabella.com') {
+        const market = /(?:^|\/)falabella-(cl|co|pe)(?:\/|$)/i.exec(location.pathname);
+        if (market) store = { cl: 'CLP', co: 'COP', pe: 'PEN' }[market[1].toLowerCase()];
+      }
+      if (ok(store)) return out(store, 'the store’s country');
       if (ctx) {
         let v = ok(voteCurrency());
         // A page full of "$" prices on a .com.ar / .mx / .cl... address: the address says which dollar.
@@ -355,7 +371,7 @@
       const cls = typeof el.className === 'string' ? el.className : '';
       let attrs = '';
       for (const a of el.attributes) if (/price|amount/i.test(a.name)) attrs += ' ' + a.name;
-      const s = `${cls} ${el.id || ''} ${el.getAttribute('itemprop') || ''}${attrs}`;
+      const s = `${cls} ${el.id || ''} ${el.getAttribute('itemprop') || ''} ${el.getAttribute('data-testid') || ''}${attrs}`;
       if (NOT_PRICE.test(s)) return null;
       if (PRICE_HINT.test(s)) return el;
     }
@@ -380,7 +396,7 @@
     return el && !blocked(node) && STRUCK_NUM.test(node.nodeValue) ? el : null;
   }
 
-  const priceLike = (node) => priceElement(node.parentElement) || labelledPrice(node) || struckPrice(node);
+  const priceLike = (node) => !blocked(node) && (priceElement(node.parentElement) || labelledPrice(node) || struckPrice(node));
 
   function bareHits(text, node) {
     const el = priceLike(node);
@@ -398,9 +414,10 @@
   function retryBare() {
     lastBare = Date.now();
     bareTries++;
-    if (!ctx || ctx.bare) return;
+    if (!ctx || switching) return;
     const d = detectPageCurrency();
     if (!d.code) return;
+    if (ctx.bare && ctx.bare !== d.code) { start(); return; }
     ctx.bare = d.code;
     ctx.bareSource = d.source;
     ctx.sym = resolveSymbols(d.code);
@@ -471,6 +488,7 @@
 
   function start() {
     stop();
+    switching = false;
     const run = ++runId;
     if (!settings.enabled) return setState('off', 'turned off in settings');
     if (!rates) return setState('norates', 'no exchange rates yet (open settings and press Refresh now)');
@@ -508,19 +526,20 @@
     // after load. Give it a moment first, so it works from its own numbers and not from ours.
     siteConverter = detectConverter();
     const begin = () => {
-      if (run !== runId || !ctx) return;
+      if (run !== runId || !ctx || switching) return;
       scan(document.body);
       drain();
       log(`target ${ctx.target}; converted ${convertedCount()} price(s) so far`);
       syncBadge();
       observer = new MutationObserver(onMutations);
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      if (document.head) observer.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['content'] });
     };
     if (siteConverter) initTimer = setTimeout(begin, 1000); else begin();
     // web components often attach and fill their shadow trees a little after load: look again
     for (const ms of [800, 2500, 6000]) {
       setTimeout(() => {
-        if (run !== runId || !ctx || state !== 'active' || !observer) return;
+        if (run !== runId || !ctx || switching || state !== 'active' || !observer) return;
         scan(document.body);
         drain();
         syncBadge();
@@ -538,8 +557,11 @@
   // Put every page text we changed back to the site's original.
   function revertAll() {
     for (const [el, s] of azSaved) {
-      s.off.textContent = s.offText;
-      s.vis.replaceChildren(...s.visNodes);
+      // Do not overwrite a source price the shop has just updated.
+      const changedSource = s.off.textContent !== s.shown;
+      const ours = s.vis.childNodes.length === 1 && s.vis.firstChild === s.marker;
+      if (!changedSource) s.off.textContent = s.offText;
+      if (ours) s.vis.replaceChildren(...(changedSource ? [document.createTextNode(s.off.textContent)] : s.visNodes));
       el.removeAttribute('data-pc-az');
     }
     azSaved.clear();
@@ -573,14 +595,16 @@
     const t = e.target;
     const el = t && t.closest ? t.closest(CONVERTER_DOM) : null;
     if (!el || /price|money|amount/i.test(typeof el.className === 'string' ? el.className : '')) return;
+    switching = true;
+    clearTimeout(initTimer);
+    clearTimeout(flushTimer); flushTimer = null;
+    pending.clear();
     revertAll();
     drain();
     clearTimeout(reapplyTimer);
     reapplyTimer = setTimeout(() => {
       if (!ctx || state !== 'active') return;
-      scan(document.body);
-      drain();
-      syncBadge();
+      start();
     }, 1200);
   };
   document.addEventListener('click', onSwitch, true);
@@ -589,6 +613,8 @@
   // ---------- scanning ----------
 
   function scan(root) {
+    const az = (root.nodeType === 1 ? root : root.parentElement)?.closest('.a-price');
+    if (az) { convertAmazon(az); return; }
     const frags = [];
     if (root.nodeType === 3) {
       handleText(root, frags);
@@ -601,6 +627,9 @@
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       const nodes = [];
       for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n);
+      // Reconstruct split prices before standalone digits are converted.
+      nodes.forEach(convertRaisedCents);
+      nodes.filter((n) => n.parentElement && !n.parentElement.closest(SKIP) && !n.parentElement.closest('.a-price') && PC.isFragment(n.nodeValue)).forEach(convertSplit);
       nodes.forEach((n) => handleText(n, frags));
       scanShadows(root);
     }
@@ -626,7 +655,7 @@
     const prev = conv.get(node);
     if (prev && prev.text === text) return true;     // our own output
     if (prev) forget(node);                           // the page changed this text
-    if (!text || text.length > 3000 || !/\d/.test(text)) return false;
+    if (!text || text.length > 100000 || !/\d/.test(text)) return false;
     const info = {};
     let hits = PC.find(text, ctx, info);
     if (!hits.length) {
@@ -707,7 +736,7 @@
     if (!isCurrencyOnly(t) || !PC.find(t + ' 1', ctx).length) return;
     for (const dir of [1, -1]) {
       const other = neighbourText(node, dir);
-      if (!other || !isNumberOnly(PC.clean(other.nodeValue))) continue;
+      if (!other || !isNumberOnly(PC.clean(other.nodeValue)) || isZeroNum(PC.clean(other.nodeValue))) continue;
       const tb = node.parentElement && node.parentElement.closest('table');
       if (tb && tb.contains(other)) continue;                 // table header + cell: not one price
       ctx.missed.add(node);
@@ -728,6 +757,7 @@
       if (inside.length < 2) continue;                                  // inside one node: handled by convertNode
       if (inside.some((sp) => sp.start < start || sp.end > end)) continue;
       if (inside.some((sp) => conv.has(sp.node) || grouped.has(sp.node) || blocked(sp.node))) continue;
+      if (!inside.some((sp) => priceLike(sp.node))) continue;
       const h = PC.bare(m[1], ctx.bare, ctx);
       if (!h) continue;
       applySplit(inside.map((sp) => sp.node), h);
@@ -806,6 +836,9 @@
   }
 
   const isCurrencyOnly = (t) => PC.isFragment(t) && !/\d/.test(t) && !!ctx && PC.hasCurrency(t, ctx);
+  // "0", "0.00", "฿0": free shipping and similar. These are skipped on purpose, so never report them as misses.
+  const isZeroNum = (t) => /^\D{0,3}0+(?:[.,]\s?0+)?\D{0,3}$/.test(t);
+  const zeroBeside = (node) => [1, -1].some((d) => { const o = neighbourText(node, d); return !!o && isZeroNum(PC.clean(o.nodeValue)); });
   const isNumberOnly = (t) => PC.isFragment(t) && /\d/.test(t);
 
   // "AED" and "150.00" as neighbours in page order, however the elements are nested.
@@ -864,17 +897,59 @@
     markRanges([r]);
   }
 
+  // Superscript/smaller cents without a printed decimal separator (Walmart, Liverpool).
+  function convertRaisedCents(node) {
+    if (!ctx || conv.has(node) || grouped.has(node) || !/^\d{2}$/.test(PC.clean(node.nodeValue))) return;
+    const el = node.parentElement;
+    if (!el || el.closest(SKIP) || el.closest('.a-price') || blocked(node)) return;
+    const whole = neighbourText(node, -1);
+    if (!whole || conv.has(whole) || grouped.has(whole) || blocked(whole)) return;
+    const wp = whole.parentElement;
+    if (!wp || !wp.parentElement?.contains(node) || !sameBlock(whole, node)) return;
+    const centsStyle = getComputedStyle(el), wholeStyle = getComputedStyle(wp);
+    const raised = el.tagName === 'SUP' || centsStyle.verticalAlign === 'super' ||
+      parseFloat(centsStyle.fontSize) < parseFloat(wholeStyle.fontSize) * 0.85;
+    if (!raised) return;
+    const t = PC.clean(whole.nodeValue);
+    let hit = PC.find(t, ctx)[0];
+    if (hit && (hit.start !== 0 || hit.end !== t.length)) return;
+    let label = null;
+    if (!hit) {
+      const before = neighbourText(whole, -1);
+      if (before && isCurrencyOnly(PC.clean(before.nodeValue)) && sameBlock(before, node) && !blocked(before)) {
+        const joined = PC.clean(before.nodeValue) + ' ' + t;
+        const candidate = PC.find(joined, ctx)[0];
+        if (candidate && candidate.end === joined.length) { hit = candidate; label = before; }
+      }
+    }
+    if (!hit && priceLike(whole)) hit = PC.bare(t, ctx.bare, ctx);
+    if (!hit || hit.compact || /[.,]\d{1,2}$/.test(t)) return;
+    hit = { ...hit, amount: hit.amount + Number(node.nodeValue) / 100, text: (hit.label || hit.text) + '.' + node.nodeValue };
+    applySplit(label ? [label, whole, node] : [whole, node], hit);
+  }
+
   // Amazon splits prices into separate <span>s ("$" "19" "99"); rebuild the visible part.
   function convertAmazon(el) {
-    if (el.hasAttribute('data-pc-az') || !ctx) return;
+    if (!ctx) return;
     const off = el.querySelector('.a-offscreen');
     const vis = el.querySelector(':scope > [aria-hidden="true"]');
     if (!off || !vis) return;
-    const t = off.textContent.trim();
+    const saved = azSaved.get(el);
+    const ownVisible = saved && vis.childNodes.length === 1 && vis.firstChild === saved.marker;
+    if (saved && off.textContent === saved.shown && ownVisible) return;
+    const sourceChanged = !saved || off.textContent !== saved.shown;
+    const t = (sourceChanged ? off.textContent : vis.textContent).trim();
+    if (saved) {
+      if (!sourceChanged) off.textContent = t;
+      if (ownVisible) vis.replaceChildren(document.createTextNode(t));
+      azSaved.delete(el);
+      el.removeAttribute('data-pc-az');
+    }
     const hits = PC.find(t, ctx);
     if (hits.length !== 1 || hits[0].start !== 0 || hits[0].end !== t.length) return;
     const shown = PC.render(hits[0], ctx);
-    azSaved.set(el, { off, offText: off.textContent, vis, visNodes: Array.from(vis.childNodes) });
+    const record = { off, offText: off.textContent, vis, visNodes: Array.from(vis.childNodes), shown, marker: null };
+    azSaved.set(el, record);
     el.setAttribute('data-pc-az', '');
     off.textContent = shown;
     const sp = document.createElement('span');
@@ -882,6 +957,7 @@
     sp.dataset.orig = hits[0].text;
     sp.dataset.from = hits[0].from;
     sp.textContent = shown;
+    record.marker = sp;
     vis.replaceChildren(sp);
   }
 
@@ -889,22 +965,37 @@
 
   function onMutations(list) {
     if (!alive()) return shutdown();
+    if (switching) return;
+    const metaSelector = 'meta[name="currency"],meta[property*="currency"],meta[itemprop="priceCurrency"],script[type="application/ld+json"]';
+    if (list.some((m) => {
+      const el = m.target.nodeType === 1 ? m.target : m.target.parentElement;
+      return el?.closest(metaSelector) || Array.from(m.addedNodes || []).some(n => n.nodeType === 1 && (n.matches(metaSelector) || n.querySelector(metaSelector)));
+    })) {
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(start, 200);
+      return;
+    }
     for (const m of list) {
       if (m.type === 'characterData') pending.add(m.target);
-      else for (const n of m.addedNodes) if (n.nodeType === 1 || n.nodeType === 3) pending.add(n);
+      else {
+        pending.add(m.target);
+        for (const n of m.addedNodes) if (n.nodeType === 1 || n.nodeType === 3) pending.add(n);
+      }
     }
     if (!flushTimer) flushTimer = setTimeout(flush, 120);
   }
 
   function flush() {
     flushTimer = null;
-    if (ctx && !ctx.bare && ctx.skipped.size > 0 && bareTries < 8 && Date.now() - lastBare > 2000) retryBare();
+    if (switching) return;
+    if (ctx && bareTries < 8 && Date.now() - lastBare > 2000) retryBare();
     if (!ctx || !observer) return;
     const nodes = [...pending];
     pending.clear();
     for (const n of nodes) if (n.isConnected) scan(n);
     drain();                                          // ignore the changes we just made
     for (const [n] of conv) if (!n.isConnected) forget(n);
+    for (const [el] of azSaved) if (!el.isConnected) azSaved.delete(el);
     for (const n of ctx.skipped) if (!n.isConnected) ctx.skipped.delete(n);
     for (const n of ctx.missed) {
       if (!n.isConnected || conv.has(n) || grouped.has(n) || !isCurrencyOnly(PC.clean(n.nodeValue))) ctx.missed.delete(n);
@@ -1034,13 +1125,9 @@
       }
     } else if (area === 'local') {
       if (!changes.rates) return;
-      const had = !!rates;
-      const wasApprox = ratesApprox;
       rates = changes.rates.newValue || null;
       if (changes.ratesBundled) ratesApprox = !!changes.ratesBundled.newValue;
-      // routine 6-hourly refresh: just use the new numbers from now on, don't redo the page.
-      // (Going from built-in approximate rates to live ones does redo it.)
-      if (had && !wasApprox && rates && rates[settings.target]) { if (ctx) ctx.rates = rates; return; }
+      // Re-render from saved originals so displayed values and hover rates stay consistent.
     } else {
       return;
     }
@@ -1091,6 +1178,7 @@
         seen++;
         const t = n.nodeValue.trim();
         if (!t || t.length > 60 || conv.has(n) || grouped.has(n)) continue;
+        if (isZeroNum(PC.clean(t)) || (isCurrencyOnly(PC.clean(t)) && zeroBeside(n))) continue;   // free items are skipped on purpose
         if (!/\d/.test(t) && !PC.isFragment(t)) continue;
         const p = n.parentElement;
         if (!p || p.closest(SKIP) || t.includes(ctx.target) || t.includes('%')) continue;
@@ -1110,12 +1198,22 @@
     }
     let mf = {};
     try { mf = chrome.runtime.getManifest(); } catch (e) { /* ignore */ }
+    // the exchange rate in use (no page content), so a wrong-looking number can be checked against it
+    const extra = [];
+    try {
+      const from = ctx && ctx.bare;
+      if (from && ctx.rates && ctx.rates[from] && ctx.rates[settings.target]) {
+        const r = ctx.rates[settings.target] / ctx.rates[from];
+        extra.push(`rate: 1 ${from} = ${r.toFixed(r < 1 ? 5 : 3)} ${settings.target} (${ratesApprox ? 'built-in approximate rates' : 'live rates'})`);
+      }
+    } catch (e) { /* the report still works without these lines */ }
     return [
       `${BRAND} ${mf.version || ''}`.trim(),
       `site: ${location.hostname}`,
       `state: ${state}${stateReason ? ' (' + stateReason + ')' : ''}; target ${settings.target}; fee ${Number(settings.fxBuffer) || 0}%`,
       `site currency: ${ctx && ctx.bare ? ctx.bare + ' (' + ctx.bareSource + ')' : 'not detected'}; converted ${convertedCount()}; skipped-unknown ${ctx ? ctx.skipped.size : 0}`,
       `site converter: ${siteConverter || 'none'}`,
+      ...extra,
       `not converted (${rows.length}):`,
       ...rows.map((r, i) => `${i + 1}. ${r}`)
     ].join('\n');

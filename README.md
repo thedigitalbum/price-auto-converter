@@ -71,6 +71,24 @@ page makes clear which krona or rand it is. Pick fixed meanings in Settings if y
 `chrome://extensions` → click the reload arrow on the extension, then refresh the page.
 Errors: **Details → Inspect views → service worker** (background), or DevTools console (page).
 
+## Automated regression tests
+Requires Node.js and npm. From the repository folder:
+```
+npm install
+npx playwright install chromium
+npm test
+```
+The tests use fixed exchange rates and local HTML fixtures. They cover number parsing,
+split cents and currency labels, non-price text, currency detection and switching, late
+metadata, dynamic updates, shadow DOM, rate refreshes, and restoration. One test loads
+the actual unpacked extension in a separate Chromium profile. Your regular Chrome
+profile is not changed. Test profiles are stored in `test-results/`.
+
+To install a test ZIP, extract it, open `chrome://extensions`, enable **Developer mode**,
+and choose **Load unpacked** → the extracted folder containing `manifest.json`.
+Disable the previous copy first to prevent two versions converting the same page.
+After an update, reload the extension and refresh the pages being tested.
+
 ## Files
 - `manifest.json` – extension config (Manifest V3)
 - `background.js` – fetches/caches exchange rates every 6 hours
@@ -84,8 +102,10 @@ Errors: **Details → Inspect views → service worker** (background), or DevToo
 ## For developers
 - Console diagnostics are off. To turn them on, open the settings page, press F12 and run
   `chrome.storage.sync.set({ debug: true })`, then reload the tab you're testing.
-- Chrome Web Store package: zip everything except `test.html` and `README.md`
-  (`manifest.json` must be at the top level of the zip).
+- Chrome Web Store / Load unpacked package: include `manifest.json`, `background.js`,
+  `content.js`, `content.css`, `lib.js`, `options.html`, `options.js`, `popup.html`,
+  `popup.js`, `fallback-rates.json`, `LICENSE` and `icons/`. Keep `manifest.json` at
+  the top level. Exclude tests, dependencies, profiles and Git metadata.
 
 ## Support
 Free forever. If it saves you time, you can support it on Ko-fi: https://ko-fi.com/harryrama
