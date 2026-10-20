@@ -1367,9 +1367,16 @@
       saved && vis.childNodes.length === 1 && vis.firstChild === saved.marker;
     if (saved && off.textContent === saved.shown && ownVisible) return;
     const sourceChanged = !saved || off.textContent !== saved.shown;
-    const t = (sourceChanged ? off.textContent : vis.textContent).trim();
+    // Amazon's priceToPay can leave .a-offscreen blank while the visible
+    // symbol/whole/fraction spans contain the complete price. Never reparse
+    // our own converted marker when the shop clears its hidden text first.
+    const t =
+      (sourceChanged ? off.textContent : vis.textContent).trim() ||
+      (!ownVisible ? vis.textContent.trim() : "");
+    if (!t) return;
     if (saved) {
-      if (!sourceChanged) off.textContent = t;
+      if (!sourceChanged)
+        off.textContent = saved.offText.trim() ? t : saved.offText;
       if (ownVisible) vis.replaceChildren(document.createTextNode(t));
       azSaved.delete(el);
       el.removeAttribute("data-pc-az");

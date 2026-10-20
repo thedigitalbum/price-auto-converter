@@ -154,3 +154,21 @@ test('Currency labels and fee buffer restore without double conversion', async t
   await p.evaluate(() => setSettings({ enabled: false }));
   await text(p, '#price', 'RM100');
 });
+
+
+test('Amazon price-to-pay with blank accessibility text converts the visible 494.95 and restores its spans', async t => {
+  const visible='<span class="a-price-symbol">$</span><span class="a-price-whole">494<span class="a-price-decimal">.</span></span><span class="a-price-fraction">95</span>';
+  const p=await fixture(t, '<span class="a-price priceToPay" id="az"><span class="a-offscreen"> </span><span aria-hidden="true">'+visible+'</span></span>',{url:'https://www.amazon.com/dp/fixture'});
+  await text(p,'#az [aria-hidden]','≈ ₱27,717.20');
+  await p.evaluate(()=>setSettings({enabled:false}));
+  await text(p,'#az [aria-hidden]','$494.95');
+  assert.equal(await p.locator('#az [aria-hidden]').innerHTML(),visible);
+  assert.equal(await p.textContent('#az .a-offscreen'),' ');
+  await p.evaluate(()=>setSettings({enabled:true}));
+  await text(p,'#az [aria-hidden]','≈ ₱27,717.20');
+  await p.evaluate(()=>document.querySelector('#az [aria-hidden]').innerHTML='<span class="a-price-symbol">$</span><span class="a-price-whole">469<span class="a-price-decimal">.</span></span><span class="a-price-fraction">00</span>');
+  await text(p,'#az [aria-hidden]','≈ ₱26,264.00');
+  await p.evaluate(()=>setSettings({enabled:false}));
+  await text(p,'#az [aria-hidden]','$469.00');
+  assert.equal(await p.textContent('#az .a-offscreen'),' ');
+});
