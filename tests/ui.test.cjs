@@ -205,6 +205,24 @@ test(
     await report.waitForFunction(
       () => !document.querySelector("#send").disabled,
     );
+    // Reproduce Chrome's initial 200px viewport when navigating a toolbar popup.
+    await report.setViewportSize({ width: 200, height: 600 });
+    assert.equal(
+      await report.evaluate(() => document.body.getBoundingClientRect().width),
+      384,
+    );
+    await report.setViewportSize({ width: 384, height: 600 });
+    assert.ok(
+      await report.evaluate(() => document.documentElement.scrollHeight <= 600),
+      "collapsed report fits Chrome popup height",
+    );
+    if (process.env.UI_SCREENSHOTS) {
+      fs.mkdirSync(process.env.UI_SCREENSHOTS, { recursive: true });
+      await report.screenshot({
+        path: path.join(process.env.UI_SCREENSHOTS, "report-popup-ready.png"),
+        fullPage: true,
+      });
+    }
     const sendBounds = await report.locator("#send").boundingBox();
     assert.ok(
       sendBounds.y + sendBounds.height <= 600,
@@ -248,7 +266,7 @@ test(
       "Settings report opens inline",
     );
     await settings.getByRole("button", { name: "Close", exact: true }).click();
-    await settings.locator(".report-dialog").waitFor({state:"detached"});
+    await settings.locator(".report-dialog").waitFor({ state: "detached" });
     const unsupported = await context.newPage();
     await unsupported.addInitScript(() => {
       chrome.tabs.query = async () => [{ id: -999 }];
@@ -283,7 +301,7 @@ test(
     for (const [page, width] of [
       [settings, 1100],
       [settings, 375],
-      [report, 375],
+      [report, 384],
       [popup, 384],
     ]) {
       await page.setViewportSize({ width, height: 850 });

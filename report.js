@@ -9,7 +9,11 @@ UI.version();
 const reportView = new URLSearchParams(location.search).get("view");
 if (reportView === "popup" || reportView === "embedded")
   document.body.classList.add("report-popup");
-if (reportView === "embedded") document.querySelector(".topbar").hidden = true;
+if (reportView === "embedded") {
+  document.documentElement.classList.remove("report-document");
+  document.body.classList.add("report-embedded");
+  document.querySelector(".topbar").hidden = true;
+}
 
 async function build() {
   try {
