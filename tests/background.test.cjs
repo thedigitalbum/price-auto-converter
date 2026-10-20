@@ -52,6 +52,8 @@ function worker(fetcher) {
     fetch: fetcher,
     importScripts: () => {},
     DX: { append: async (code) => events.push(code) },
+    URL,
+    REPORT_DELIVERY: {schedule:()=>{},flush:async()=>{},configured:()=>true,submit:async()=>({ok:true,status:'sent'})},
   });
   vm.runInContext(
     fs.readFileSync(path.join(root, "background.js"), "utf8"),

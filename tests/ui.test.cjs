@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
 const { browserOptions, verifyBrowser } = require("./browser.cjs");
-const root = process.env.SOURCE_DIR || path.join(__dirname, "..");
+const sourceRoot = process.env.SOURCE_DIR || path.join(__dirname, "..");
 
 test(
   "Extension UI: persistence, rules, reports, privacy, offline and responsive layout",
@@ -17,6 +17,23 @@ test(
       process.env.TEMP = dir;
       process.env.TMP = dir;
     }
+    // Same packaged runtime, with only the receiver URL replaced by an isolated HTTP fixture.
+    const root = fs.mkdtempSync(path.join(dir, "report-runtime-"));
+    const packageFiles = JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, "../scripts/package-files.json"),
+        "utf8",
+      ),
+    );
+    for (const file of packageFiles) {
+      const dest = path.join(root, file);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(path.join(sourceRoot, file), dest);
+    }
+    fs.writeFileSync(
+      path.join(root, "report-config.js"),
+      "const REPORT_CONFIG=Object.freeze({endpoint:'https://script.google.com/macros/s/AKfycb_test_collector_123456789/exec'});",
+    );
     const context = await chromium.launchPersistentContext(
       fs.mkdtempSync(path.join(dir, "ui-profile-")),
       {
@@ -149,60 +166,55 @@ test(
       ),
       "solid",
     );
-    const report = await context.newPage();
-    await report.goto(base + "report.html?tabId=" + shopId);
+    await worker.evaluate(() => {
+      const original = fetch;
+      self.testReports = [];
+      self.fetch = async (url, options) => {
+        if (String(url).startsWith("https://script.google.com/macros/s/")) {
+          const report = JSON.parse(options.body);
+          self.testReports.push(report);
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              reportId: report.id,
+              receipt: "PAC-20261020-test123456",
+            }),
+            { status: 200 },
+          );
+        }
+        return original(url, options);
+      };
+    });
+    const opened = context.waitForEvent("page");
+    await popup.click("#report");
+    const report = await opened;
     await report.waitForFunction(
-      () => !document.querySelector("#download").disabled,
+      () => !document.querySelector("#send").disabled,
     );
-    let data = JSON.parse(await report.inputValue("#preview"));
-    assert.equal(data.page.hostname, undefined);
-    assert.equal(data.page.priceExamples, undefined);
-    assert.ok(!JSON.stringify(data).includes("PRIVATE ACCOUNT TEXT"));
-    assert.ok(!JSON.stringify(data).includes("private=secret"));
-    await report.check("#includeSite");
-    await report.waitForFunction(() =>
-      document.querySelector("#preview").value.includes('"hostname"'),
-    );
-    data = JSON.parse(await report.inputValue("#preview"));
+    const data = JSON.parse(await report.inputValue("#preview"));
     assert.equal(data.page.hostname, "shop.example");
-    await report.check("#includeExamples");
-    await report.waitForFunction(() =>
-      document.querySelector("#preview").value.includes('"priceExamples"'),
+    assert.equal(data.page.priceExamples, undefined);
+    for (const secret of ["PRIVATE ACCOUNT TEXT", "private=secret", "USD 100"])
+      assert.ok(!JSON.stringify(data).includes(secret));
+    assert.equal(
+      await report.locator("#github,#includeSite,#includeExamples").count(),
+      0,
     );
-    assert.ok(
-      JSON.parse(
-        await report.inputValue("#preview"),
-      ).page.priceExamples.includes("USD 100"),
+    assert.equal(await report.locator("details").getAttribute("open"), null);
+    await report.click("#send");
+    await report.waitForFunction(
+      () => document.querySelector("#send").textContent === "Sent",
     );
+    assert.equal(await report.isDisabled("#send"), true);
+    assert.equal(await worker.evaluate(() => self.testReports.length), 1);
+    assert.match(await report.textContent("#message"), /Reference: PAC-/);
+    await report.locator("summary").click();
     const downloaded = report.waitForEvent("download");
     await report.click("#download");
     const file = await downloaded;
-    assert.match(file.suggestedFilename(), /\.json$/);
     assert.deepEqual(
       JSON.parse(fs.readFileSync(await file.path(), "utf8")),
-      JSON.parse(await report.inputValue("#preview")),
-    );
-    await report.evaluate(() => {
-      window.copied = "";
-      window.opened = "";
-      Object.defineProperty(navigator.clipboard, "writeText", {
-        value: async (text) => {
-          window.copied = text;
-        },
-      });
-      chrome.tabs.create = async ({ url }) => {
-        window.opened = url;
-      };
-    });
-    await report.click("#github");
-    await report.waitForFunction(() => window.opened);
-    assert.equal(
-      await report.evaluate(() => window.opened),
-      "https://github.com/thedigitalbum/price-auto-converter/issues/new",
-    );
-    assert.equal(
-      await report.evaluate(() => window.copied),
-      await report.inputValue("#preview"),
+      data,
     );
     const unsupported = await context.newPage();
     await unsupported.addInitScript(() => {
@@ -256,17 +268,17 @@ test(
       await settings.setViewportSize({ width: 1100, height: 900 });
       await settings.fill("#excluded", "");
       await settings.screenshot({
-        path: path.join(out, "settings-v1.1.0.png"),
+        path: path.join(out, "settings-v1.1.1.png"),
         fullPage: true,
       });
       await popup.setViewportSize({ width: 384, height: 760 });
       await popup.screenshot({
-        path: path.join(out, "popup-v1.1.0.png"),
+        path: path.join(out, "popup-v1.1.1.png"),
         fullPage: true,
       });
       await report.setViewportSize({ width: 900, height: 900 });
       await report.screenshot({
-        path: path.join(out, "report-v1.1.0.png"),
+        path: path.join(out, "report-v1.1.1.png"),
         fullPage: true,
       });
     }

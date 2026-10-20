@@ -1,3 +1,5 @@
+> **1.1.1 reporting update in development:** private anonymous submission replaces the earlier GitHub reporting flow. See docs/BUG_REPORTS.md and collector/SETUP.md. Production packaging is blocked until the receiver is configured and tested. Earlier 1.1.0 release instructions below apply only to that release.
+
 # Chrome Web Store submission — 1.1.0
 
 Prepared 20 October 2026. Owner-confirmed Chrome pilot passed. Publisher name: **Harry Rama**. Public support email: **thedigitalbum@gmail.com**. Developer account registration is still required. No store item or submission has been created.

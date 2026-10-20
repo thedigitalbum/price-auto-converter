@@ -1,3 +1,5 @@
+> **1.1.1 reporting update in development:** private anonymous submission replaces the earlier GitHub reporting flow. See docs/BUG_REPORTS.md and collector/SETUP.md. Production packaging is blocked until the receiver is configured and tested. Earlier 1.1.0 release instructions below apply only to that release.
+
 # Price Auto Converter
 
 Convert supported prices into a familiar currency while browsing. Amounts are estimates; hover a converted price to see its original and the rate used. The shop and your bank determine what you actually pay.

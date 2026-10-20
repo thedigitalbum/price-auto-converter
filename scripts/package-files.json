@@ -1,0 +1,7 @@
+[
+  "manifest.json", "background.js", "content.js", "content.css", "lib.js",
+  "diagnostics.js", "report-core.js", "report-config.js", "report-delivery.js",
+  "ui.js", "ui.css", "options.html", "options.js", "popup.html", "popup.js",
+  "report.html", "report.js", "privacy.html", "fallback-rates.json", "LICENSE",
+  "icons/icon16.png", "icons/icon48.png", "icons/icon128.png"
+]
