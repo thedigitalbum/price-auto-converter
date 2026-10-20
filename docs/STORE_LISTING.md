@@ -1,6 +1,6 @@
-# Chrome Web Store submission draft
+# Chrome Web Store listing copy
 
-Not submitted. Use only after the release pilot in RELEASE_READINESS.md passes. Remove the release-candidate version label for the approved final build and re-run package validation.
+Prepared 20 October 2026 after owner-confirmed pilot sign-off. Not yet submitted. Publisher: Harry Rama. Public support email: thedigitalbum@gmail.com. Final dashboard steps are in SUBMISSION.md.
 
 ## Listing copy
 
@@ -36,11 +36,11 @@ Remote code declaration: **No remote code**. All executable JS/CSS is bundled. R
 
 ## Privacy and support fields
 
-Public policy after merging: https://github.com/thedigitalbum/price-auto-converter/blob/main/PRIVACY.md
+Public policy URL: https://github.com/thedigitalbum/price-auto-converter/blob/main/PRIVACY.md
 
 Support: https://github.com/thedigitalbum/price-auto-converter/issues
 
-Do not submit a main-branch policy link until it exists there. The candidate branch already contains the policy and an offline copy is bundled.
+Verify this public main-branch URL loads before submission. An offline copy is also bundled.
 
 Dashboard disclosures must match the current code and policy. Describe local webpage-price processing, Chrome-synced preferences/site rules, rate-provider network metadata, local fixed-code history, and optional user-submitted public reports. Do not state “never handles website content” or “never handles financial information”: conversion reads price text locally, and users may voluntarily share price examples. No automatic collection of browsing history, credentials, cookies or payment information is implemented. Assess the dashboard's current category definitions against these facts before certifying; no dashboard answers or legal certifications were submitted by this work.
 

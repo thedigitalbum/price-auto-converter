@@ -1,6 +1,6 @@
 # Price Auto Converter privacy policy
 
-Last updated: 19 October 2026. Maintainer: Harry Rama (`thedigitalbum` on GitHub).
+Last updated: 20 October 2026. Maintainer: Harry Rama (`thedigitalbum` on GitHub).
 
 ## Price conversion
 
@@ -26,4 +26,4 @@ The extension has no analytics, advertising trackers, automatic report uploads o
 
 ## Contact
 
-Contact the maintainer through [project issues](https://github.com/thedigitalbum/price-auto-converter/issues). Do not include sensitive information in a public issue. The installed extension also includes an offline privacy page linked from Settings and Report a problem.
+Contact Harry Rama at [thedigitalbum@gmail.com](mailto:thedigitalbum@gmail.com) or through [project issues](https://github.com/thedigitalbum/price-auto-converter/issues). Do not include sensitive information in a public issue. The installed extension also includes an offline privacy page linked from Settings and Report a problem.

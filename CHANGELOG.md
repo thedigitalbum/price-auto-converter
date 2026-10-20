@@ -1,6 +1,7 @@
 # Changelog
 
-## 1.1.0 (release candidate)
+## 1.1.0
+- Finalized for store submission after owner-confirmed Chrome pilot sign-off on 20 October 2026; removed the candidate label and added the public support contact
 - Raised the unverified Chrome 105 floor to runtime-tested Chrome 113.0.5672.63; all 67 tests pass on official minimum and Stable Chrome builds, and CI now maintains that Chrome-only matrix
 - Redesigned popup and Settings with a restrained Neo Tokyo palette, readable controls, clear rate freshness and keyboard focus
 - Added local JSON bug reports with preview, copy/download and a user-submitted GitHub issue flow; hostnames and price examples are optional, with no automatic uploads

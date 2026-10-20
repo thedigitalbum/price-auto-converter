@@ -1,6 +1,6 @@
-# 1.1.0 release candidate — readiness review
+# 1.1.0 — release readiness review
 
-Reviewed 19 October 2026. Baseline: main commit `23cf3ba` (1.0.8). Recommendation: **ready for an unpacked pilot; do not submit to the Web Store yet.** No store submission, production merge or release tag was performed.
+Reviewed 19 October 2026. Baseline: main commit `23cf3ba` (1.0.8). Initial recommendation was an unpacked pilot. On 20 October 2026, the owner explicitly confirmed gates 1–4 passed and accepted the documented limitations. This is owner-reported pilot evidence, separate from automated tests. The release is now being finalized for submission. No Chrome Web Store submission has occurred.
 
 ## Completed phases
 
@@ -52,7 +52,7 @@ The earlier all-78-site report concerns the user's 1.0.7 installation. It is his
 - Overlapping pending mutation subtrees; fallback seeding race; provider freshness being confused with request time.
 - Release packaging omitting new runtime screens/files. The release workflow now tests before building.
 
-## Remaining release gates
+## Release gates and owner sign-off
 
 1. Install the extracted candidate into actual Chrome, with other copies disabled. Test the real toolbar popup, native clipboard, downloaded report, persistence after browser restart and a rate refresh. The candidate has been loaded in isolated official Chrome for Testing as well as Chromium; it has not replaced the user's installed copy.
 2. Pilot public product pages and dynamic variants on the owner's frequently used shops. Include a shop currency switch, a source override, a pause/re-enable, lazy loading and disable/reload restoration. Revisit the denied sites only when normal access becomes available. Report issues using the new flow.
@@ -61,3 +61,7 @@ The earlier all-78-site report concerns the user's 1.0.7 installation. It is his
 5. After the pilot passes, approve/merge the release PR, publish the privacy policy URL, finish actual store screenshots/contact/distribution and data-use declarations, remove the candidate label, rebuild/retest the final ZIP and submit deliberately. Google makes the acceptance decision.
 
 Run `npm ci`, install official Chrome for Testing using `python3 scripts/install_test_chrome.py stable`, then `npm test`. Point `SOURCE_DIR` at the extracted candidate to validate shipped runtime files. See [store draft](STORE_LISTING.md), [support workflow](BUG_REPORTS.md) and [privacy policy](../PRIVACY.md).
+
+## Gate 5 preparation — 20 October 2026
+
+The owner authorized proceeding toward release after confirming gates 1–4 passed. Publisher: Harry Rama. Public support contact: thedigitalbum@gmail.com. The release-candidate label has been removed, and the final package is rebuilt/retested before merging. Store-sized assets and dashboard instructions are prepared separately. A developer account is not yet registered; payment, developer agreements, account declarations and the actual store submission remain owner actions. See SUBMISSION.md.

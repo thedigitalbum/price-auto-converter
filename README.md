@@ -2,9 +2,9 @@
 
 Convert supported prices into a familiar currency while browsing. Amounts are estimates; hover a converted price to see its original and the rate used. The shop and your bank determine what you actually pay.
 
-**1.1.0 is a release candidate.** It has not been submitted to the Chrome Web Store. See [release readiness](docs/RELEASE_READINESS.md) for evidence, limitations and the final pilot checks.
+**1.1.0 is prepared for Chrome Web Store submission.** The owner confirmed the Chrome pilot passed on 20 October 2026. It has not yet been submitted or published on the store. See [release readiness](docs/RELEASE_READINESS.md) for evidence and [submission instructions](docs/SUBMISSION.md) for the account and dashboard steps.
 
-## Install the candidate manually
+## Install manually
 
 1. Extract the release ZIP to a permanent folder.
 2. Open `chrome://extensions`, enable Developer mode and choose **Load unpacked**.
