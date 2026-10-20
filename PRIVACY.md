@@ -1,29 +1,27 @@
 # Price Auto Converter privacy policy
 
-Last updated: 20 October 2026. Maintainer: Harry Rama (`thedigitalbum` on GitHub).
+Last updated: 20 October 2026. Maintainer: Harry Rama.
 
-## Price conversion
+## Conversion and preferences
 
-The extension reads supported price text and currency signals on pages where it runs and changes displayed text locally. It does not send page contents, URLs, browsing history, cookies, form values or passwords to the developer.
+Price text and currency signals are processed locally to change displayed prices. Preferences and website rules use Chrome storage and may sync through Chrome. Cached rates and up to 40 fixed error codes with timestamps stay in local extension storage. Removing the extension removes its local data; browser sync is controlled by Chrome.
 
-## Exchange-rate services
+## Exchange rates
 
-USD-based rate data is requested from `open.er-api.com` and the currency-api package on `cdn.jsdelivr.net`. These providers receive normal network information such as an IP address. Requests omit cookies and referrers. Rate URLs contain neither your current website nor your chosen currency. See the providers' own policies for their handling of network requests.
+Rate requests go to open.er-api.com and jsDelivr's currency-api package without cookies or referrers. These providers receive normal network metadata, including IP addresses. Rate URLs contain neither the current website nor the chosen currency.
 
-## Preferences and local error history
+## Reports you choose to send
 
-Currency choices, appearance preferences, fee buffers and website rules use Chrome storage. Chrome may sync these preferences and website rules when browser sync is enabled. Cached rates and a rolling list of up to 40 extension error codes use local extension storage. Each error entry contains a fixed code and timestamp, without page content or stack traces. Clear this history from the report page. Removing the extension removes its local data; browser sync is controlled by Chrome.
+Opening Report a problem prepares a report locally. Nothing is uploaded until you press Send report. The report includes extension and Chrome versions, the current public hostname, conversion settings, rate information, counts, fixed error codes and redacted element structure. Digits in structural examples are masked. Exact prices, full URLs, page prose, arbitrary HTML/classes, form values, cookies, credentials and website-rule lists are excluded. Technical details and an optional local download are available before sending.
 
-## Reports you choose to share
+Pressing Send report transmits these diagnostics through Google Apps Script to a private Google Sheet controlled by Harry Rama. A daily JSON digest is emailed to thedigitalbum@gmail.com for diagnosing and fixing the extension. Users need no Google or GitHub account. Google processes these requests and ordinary network metadata under its own privacy policy: https://policies.google.com/privacy. The collector does not store IP addresses in the report Sheet. Reports are not public or used for advertising.
 
-Reports are prepared locally and are not automatically uploaded or synced. They include the extension version, Chrome major version, relevant conversion settings, rate freshness, conversion factors, counts, canonical element shapes and recent fixed error codes. Hostnames and up to five original price examples are excluded unless you select them. Full URLs, page titles, page prose, forms, cookies and site-rule lists are excluded. Review the preview before exporting or sharing. Exported files and clipboard contents are under your control.
+Offline submissions are kept locally for up to seven days and retried automatically, with at most five waiting reports. The interface distinguishes queued reports from confirmed receipt. Server reports are retained for up to 90 days; email copies are deleted within 90 days by the maintainer. A report reference can be supplied when requesting deletion; anonymous reporting does not collect a contact address or provide an automatic reply channel. Deletion of service backups is governed by Google. You can clear local error history from the report page.
 
-Opening GitHub does not transmit the JSON report. The extension copies it so you can paste and submit it yourself. GitHub issues are public and governed by [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). Shared reports are used to diagnose and fix the extension. You may edit or delete content you posted, or ask the maintainer for help removing it. Avoid submitting personal purchase, account, payment or financial details.
+## No advertising or analytics
 
-## No advertising, analytics or data sales
-
-The extension has no analytics, advertising trackers, automatic report uploads or data sales. Information is used only to provide and improve price conversion and user-requested support. The use of information received from Google APIs adheres to the Chrome Web Store User Data Policy, including its Limited Use requirements.
+There are no advertising trackers, analytics SDKs, data sales or automatic unsolicited crash uploads. Information is used only for price conversion and user-requested support. Use of information received from Google APIs adheres to the Chrome Web Store User Data Policy, including Limited Use requirements.
 
 ## Contact
 
-Contact Harry Rama at [thedigitalbum@gmail.com](mailto:thedigitalbum@gmail.com) or through [project issues](https://github.com/thedigitalbum/price-auto-converter/issues). Do not include sensitive information in a public issue. The installed extension also includes an offline privacy page linked from Settings and Report a problem.
+Harry Rama: [thedigitalbum@gmail.com](mailto:thedigitalbum@gmail.com). GitHub issues are optional public support, subject to GitHub's privacy policy; do not post sensitive information there.

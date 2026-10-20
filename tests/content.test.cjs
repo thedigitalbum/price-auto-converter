@@ -154,3 +154,42 @@ test('Currency labels and fee buffer restore without double conversion', async t
   await p.evaluate(() => setSettings({ enabled: false }));
   await text(p, '#price', 'RM100');
 });
+
+
+test('Amazon price-to-pay with blank accessibility text converts the visible 494.95 and restores its spans', async t => {
+  const visible='<span class="a-price-symbol">$</span><span class="a-price-whole">494<span class="a-price-decimal">.</span></span><span class="a-price-fraction">95</span>';
+  const p=await fixture(t, '<span class="a-price priceToPay" id="az"><span class="a-offscreen"> </span><span aria-hidden="true">'+visible+'</span></span>',{url:'https://www.amazon.com/dp/fixture'});
+  await text(p,'#az [aria-hidden]','≈ ₱27,717.20');
+  await p.evaluate(()=>setSettings({enabled:false}));
+  await text(p,'#az [aria-hidden]','$494.95');
+  assert.equal(await p.locator('#az [aria-hidden]').innerHTML(),visible);
+  assert.equal(await p.textContent('#az .a-offscreen'),' ');
+  await p.evaluate(()=>setSettings({enabled:true}));
+  await text(p,'#az [aria-hidden]','≈ ₱27,717.20');
+  await p.evaluate(()=>document.querySelector('#az [aria-hidden]').innerHTML='<span class="a-price-symbol">$</span><span class="a-price-whole">469<span class="a-price-decimal">.</span></span><span class="a-price-fraction">00</span>');
+  await text(p,'#az [aria-hidden]','≈ ₱26,264.00');
+  await p.evaluate(()=>setSettings({enabled:false}));
+  await text(p,'#az [aria-hidden]','$469.00');
+  assert.equal(await p.textContent('#az .a-offscreen'),' ');
+});
+
+
+const amazonBlankPrice='<span class="a-price priceToPay" id="az"><span class="a-offscreen"> </span><span aria-hidden="true"><span class="a-price-symbol">$</span><span class="a-price-whole">494<span class="a-price-decimal">.</span></span><span class="a-price-fraction">95</span></span></span>';
+test('Amazon conversion remains stable during delayed currency detection',async t=>{
+ const p=await fixture(t,'<script>document.documentElement.lang="en-US"</script><div data-currency-selector></div>'+amazonBlankPrice,{url:'https://www.amazon.com/dp/fixture',currency:''});
+ await text(p,'#az [aria-hidden]','≈ ₱27,717.20');
+ const result=await p.evaluate(async()=>{const marker=document.querySelector('#az [data-pc]');let reversions=0;const o=new MutationObserver(()=>{if(!document.querySelector('#az [aria-hidden]').textContent.includes('₱'))reversions++;});o.observe(document.querySelector('#az'),{subtree:true,childList:true,characterData:true});await new Promise(r=>setTimeout(r,4500));o.disconnect();return {reversions,same:marker===document.querySelector('#az [data-pc]'),source:statusOfExtension().bare};});
+ assert.equal(result.reversions,0,'no return to USD while idle');assert.equal(result.same,true,'conversion marker is retained');assert.equal(result.source,'USD');
+});
+test('Unchanged JSON-LD currency does not restart Amazon conversion, but a changed currency does',async t=>{
+ const p=await fixture(t,'<div data-currency-selector></div><script type="application/ld+json" id="currencydata">{"priceCurrency":"USD","ratingValue":4}</script>'+amazonBlankPrice,{url:'https://www.amazon.com/dp/fixture',currency:''});
+ await text(p,'#az [aria-hidden]','≈ ₱27,717.20');
+ const same=await p.evaluate(async()=>{const marker=document.querySelector('#az [data-pc]');for(let i=0;i<5;i++){document.querySelector('#currencydata').textContent=JSON.stringify({priceCurrency:'USD',ratingValue:i});await new Promise(r=>setTimeout(r,300));}await new Promise(r=>setTimeout(r,1300));return marker===document.querySelector('#az [data-pc]');});assert.equal(same,true,'unrelated metadata churn preserves converted price');
+ await p.evaluate(()=>document.querySelector('#currencydata').textContent=JSON.stringify({priceCurrency:'CAD'}));await text(p,'#az [aria-hidden]','≈ ₱19,798.00');
+});
+
+test('Explicit Amazon source currency survives conversion and delayed rechecks',async t=>{
+ const p=await fixture(t,'<script>document.documentElement.lang="en-US"</script><div data-currency-selector></div><span class="a-price" id="az"><span class="a-offscreen">CA$494.95</span><span aria-hidden="true">CA$494.95</span></span>',{url:'https://www.amazon.com/dp/fixture',currency:''});
+ await text(p,'#az [aria-hidden]','≈ ₱19,798.00');
+ const same=await p.evaluate(async()=>{const marker=document.querySelector('#az [data-pc]');await new Promise(r=>setTimeout(r,4500));return marker===document.querySelector('#az [data-pc]');});assert.equal(same,true);assert.equal(await p.evaluate(()=>statusOfExtension().bare),'CAD');
+});

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.2
+- Stop Amazon price blinking: ignore our rewritten accessible prices when inferring the source currency, and restart only when metadata changes the effective currency
+- Preserve conversion during repeated stock/rating metadata updates; keep real currency changes working
+- Convert Amazon price-to-pay widgets with blank hidden labels, with original spans restored when paused
+- Keep private problem reports inside the toolbar popup, with readable sizing and concise privacy/confirmation states
+- Add private Sheet reporting and daily JSON email digests; use readable Philippine-time inbox dates
+- Refuse ZIP overwrites; new review packages use unique filenames
+
 ## 1.1.0
 - Finalized for store submission after owner-confirmed Chrome pilot sign-off on 20 October 2026; removed the candidate label and added the public support contact
 - Raised the unverified Chrome 105 floor to runtime-tested Chrome 113.0.5672.63; all 67 tests pass on official minimum and Stable Chrome builds, and CI now maintains that Chrome-only matrix

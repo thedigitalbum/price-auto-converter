@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Price Auto Converter",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Convert supported prices to your currency, with original-price hints, rate freshness and simple per-site controls.",
   "minimum_chrome_version": "113.0.5672.63",
   "permissions": [
@@ -10,7 +10,9 @@
   ],
   "host_permissions": [
     "https://open.er-api.com/*",
-    "https://cdn.jsdelivr.net/npm/@fawazahmed0/*"
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/*",
+    "https://script.google.com/macros/s/AKfycbywCi0gdsT6oWOMTO6HKgQ5Ngg6ceNHE7g5mu796fSZPldz5wqEbPuHiI5njqsub0FtJQ/*",
+    "https://script.googleusercontent.com/*"
   ],
   "background": {
     "service_worker": "background.js"

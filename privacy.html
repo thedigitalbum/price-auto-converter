@@ -9,71 +9,68 @@
   <body>
     <main class="report-shell policy">
       <a href="options.html">Back to settings</a>
-      <div class="page-head">
-        <p class="eyebrow">Privacy, plainly</p>
-        <h1 style="margin-top: 10px">Your pages stay in your browser.</h1>
-        <p>Last updated 20 October 2026 · Price Auto Converter by Harry Rama</p>
-      </div>
-      <h2>Price conversion</h2>
+      <h1>Privacy, plainly</h1>
+      <p>Last updated: 20 October 2026. Maintainer: Harry Rama.</p>
+      <h2>Conversion and preferences</h2>
       <p>
-        The extension reads supported price text and currency signals on pages
-        where it runs, then changes the displayed text locally. It does not send
-        page contents, URLs, browsing history, cookies, form values or passwords
-        to the developer.
+        Price text and currency signals are processed locally to change
+        displayed prices. Preferences and website rules use Chrome storage and
+        may sync through Chrome. Cached rates and up to 40 fixed error codes
+        with timestamps stay in local extension storage. Removing the extension
+        removes its local data; browser sync is controlled by Chrome.
       </p>
-      <h2>Exchange-rate services</h2>
+      <h2>Exchange rates</h2>
       <p>
-        The extension requests USD-based exchange-rate data from open.er-api.com
-        and jsDelivr’s currency-api package. Those providers receive normal
-        network information, such as your IP address. Requests omit cookies and
-        referrers. The requested rate URL does not include the website you are
-        visiting or your chosen currency.
+        Rate requests go to open.er-api.com and jsDelivr&#x27;s currency-api
+        package without cookies or referrers. These providers receive normal
+        network metadata, including IP addresses. Rate URLs contain neither the
+        current website nor the chosen currency.
       </p>
-      <h2>Preferences and local storage</h2>
+      <h2>Reports you choose to send</h2>
       <p>
-        Currency choices, appearance preferences, fee buffers and website rules
-        use Chrome storage. Chrome may sync preferences and site rules if
-        browser sync is enabled. Cached exchange rates and a rolling list of up
-        to 40 extension error codes stay in local extension storage. Error
-        entries contain only a timestamp and a fixed code, not page content or
-        stack traces. You can clear that history from the report page, and
-        removing the extension removes its local data.
-      </p>
-      <h2>Reports you choose to share</h2>
-      <p>
-        Reports are prepared locally and are not uploaded automatically or
-        synced by the extension. They contain version, relevant settings, rate
-        freshness, counts, safe element shapes and recent error codes. Hostnames
-        and original price examples are off by default and can be included after
-        you select them. Review the preview before copying, downloading or
-        sharing.
+        Opening Report a problem prepares a report locally. Nothing is uploaded
+        until you press Send report. The report includes extension and Chrome
+        versions, the current public hostname, conversion settings, rate
+        information, counts, fixed error codes and redacted element structure.
+        Digits in structural examples are masked. Exact prices, full URLs, page
+        prose, arbitrary HTML/classes, form values, cookies, credentials and
+        website-rule lists are excluded. Technical details and an optional local
+        download are available before sending.
       </p>
       <p>
-        Opening GitHub does not send the report. The JSON is copied locally so
-        you can paste it. If you submit a GitHub issue, its contents are public
-        and subject to GitHub’s privacy policy. Reports are used to diagnose and
-        fix the extension. You can edit or remove information you posted on
-        GitHub or ask the maintainer for help removing it.
+        Pressing Send report transmits these diagnostics through Google Apps
+        Script to a private Google Sheet controlled by Harry Rama. A daily JSON
+        digest is emailed to thedigitalbum@gmail.com for diagnosing and fixing
+        the extension. Users need no Google or GitHub account. Google processes
+        these requests and ordinary network metadata under its own privacy
+        policy: https://policies.google.com/privacy. The collector does not
+        store IP addresses in the report Sheet. Reports are not public or used
+        for advertising.
       </p>
-      <h2>No advertising or data sales</h2>
       <p>
-        The extension has no analytics, advertising trackers, automatic
-        bug-report uploads or data sales. It uses information only to provide
-        and improve price conversion and user-requested support, consistent with
-        the Chrome Web Store User Data Policy’s Limited Use requirements.
+        Offline submissions are kept locally for up to seven days and retried
+        automatically, with at most five waiting reports. The interface
+        distinguishes queued reports from confirmed receipt. Server reports are
+        retained for up to 90 days; email copies are deleted within 90 days by
+        the maintainer. A report reference can be supplied when requesting
+        deletion; anonymous reporting does not collect a contact address or
+        provide an automatic reply channel. Deletion of service backups is
+        governed by Google. You can clear local error history from the report
+        page.
+      </p>
+      <h2>No advertising or analytics</h2>
+      <p>
+        There are no advertising trackers, analytics SDKs, data sales or
+        automatic unsolicited crash uploads. Information is used only for price
+        conversion and user-requested support. Use of information received from
+        Google APIs adheres to the Chrome Web Store User Data Policy, including
+        Limited Use requirements.
       </p>
       <h2>Contact</h2>
       <p>
-        Contact Harry Rama at
-        <a href="mailto:thedigitalbum@gmail.com">thedigitalbum@gmail.com</a> or
-        through
-        <a
-          href="https://github.com/thedigitalbum/price-auto-converter/issues"
-          target="_blank"
-          rel="noreferrer"
-          >the project’s GitHub issues</a
-        >. Do not post private purchase, account or financial details in a
-        public issue.
+        Harry Rama: [thedigitalbum@gmail.com](mailto:thedigitalbum@gmail.com).
+        GitHub issues are optional public support, subject to GitHub&#x27;s
+        privacy policy; do not post sensitive information there.
       </p>
     </main>
   </body>

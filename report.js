@@ -1,12 +1,23 @@
 const $ = UI.el;
-const rawTab = new URLSearchParams(location.search).get("tabId");
-const tabId = rawTab !== null && /^\d+$/.test(rawTab) ? Number(rawTab) : null;
-let generation = 0;
+const query = new URLSearchParams(location.search).get("tabId");
+const tabId = query !== null && /^\d+$/.test(query) ? Number(query) : null;
+const reportId = crypto.randomUUID();
+let report = null,
+  sending = false,
+  submitted = false;
+UI.version();
+const reportView = new URLSearchParams(location.search).get("view");
+if (reportView === "popup" || reportView === "embedded")
+  document.body.classList.add("report-popup");
+if (reportView === "embedded") {
+  document.documentElement.classList.remove("report-document");
+  document.body.classList.add("report-embedded");
+  document.querySelector(".topbar").hidden = true;
+}
+
 async function build() {
-  const current = ++generation;
-  for (const id of ["copy", "download", "github"]) $(id).disabled = true;
   try {
-    const [raw, local] = await Promise.all([
+    const [raw, local, ready] = await Promise.all([
       chrome.storage.sync.get(PC.DEFAULTS),
       chrome.storage.local.get([
         "rates",
@@ -15,93 +26,118 @@ async function build() {
         "ratesBundled",
         "diagnosticEvents",
       ]),
+      chrome.runtime.sendMessage({ type: "report-ready" }),
     ]);
     let page = null;
     if (tabId !== null)
       try {
         page = await chrome.tabs.sendMessage(tabId, {
           type: "report-context",
-          includeExamples: $("includeExamples").checked,
+          includeExamples: false,
         });
       } catch {}
-    if (current !== generation) return;
-    $("includeSite").disabled = !page;
-    $("includeExamples").disabled = !page;
-    if (!page) {
-      $("includeSite").checked = false;
-      $("includeExamples").checked = false;
-    }
-    $("pageNote").textContent = page
-      ? "Page context is available. Optional details remain off until you select them."
-      : "No page context is available. This report still includes extension settings, rates and error codes. Open Report a problem from a website’s popup to include page details.";
     const ua = /Chrom(?:e|ium)\/(\d+)/.exec(navigator.userAgent);
-    const report = DX.report({
+    const base = DX.report({
       version: chrome.runtime.getManifest().version,
       settings: PC.settings(raw),
       local,
       page,
-      browser: ua ? "Chrome/" + ua[1] : "Chromium browser",
-      includeSite: $("includeSite").checked,
-      includeExamples: $("includeExamples").checked,
+      browser: ua ? "Chrome/" + ua[1] : "Chrome",
+      includeSite: true,
+      includeExamples: false,
     });
+    base.id = reportId;
+    base.page.evidence = page?.evidence || [];
+    report = RC.prepare(base);
+    $("summary").textContent = report.summary.replace(
+      " No automatic failure was confirmed.",
+      "",
+    );
+    $("context").textContent =
+      `${report.page.converted} converted · ${report.settings.target}`;
     $("preview").value = JSON.stringify(report, null, 2);
-    for (const id of ["copy", "download", "github"]) $(id).disabled = false;
+    $("download").disabled = false;
+    if (!submitted && !sending) $("send").disabled = !ready?.configured;
+    if (!ready?.configured) UI.toast("Report delivery is not connected.", true);
   } catch {
-    if (current !== generation) return;
-    $("preview").value =
-      "Report could not be prepared. Reopen this page to try again.";
-    UI.toast("Could not prepare the report.", true);
+    UI.toast("Could not prepare report. Reopen to retry.", true);
+    $("send").disabled = true;
     DX.record("report_build_failed");
   }
 }
-async function copy() {
-  await navigator.clipboard.writeText($("preview").value);
-  UI.toast("Report copied. You can paste it into a support conversation.");
+function result(r) {
+  if (r?.ok && r.status === "sent") {
+    submitted = true;
+    document.querySelector("h1").textContent = "Thanks for helping!";
+    $("summary").textContent = "Report sent 🎉";
+    $("context").textContent = "You’re helping make price conversion better.";
+    $("disclosure").hidden = true;
+    $("send").hidden = true;
+    UI.toast("Reference: " + r.receipt);
+    $("send").textContent = "Sent";
+    $("send").disabled = true;
+  } else if (r?.ok && r.status === "queued") {
+    submitted = true;
+    $("summary").textContent = "Saved on this device.";
+    UI.toast("Retrying automatically for up to 7 days.");
+    $("send").textContent = "Waiting to send";
+    $("send").disabled = true;
+  } else {
+    const messages = {
+      not_configured: "The developer has not connected report delivery yet.",
+      queue_full: "Report queue full. Try later.",
+      too_soon: "Please wait before sending another report.",
+      invalid_report: "Report rejected. Update the extension and retry.",
+      storage_unavailable: "Could not save the report on this device.",
+    };
+    UI.toast(
+      messages[r?.code] || "Could not save the report. Please try again.",
+      true,
+    );
+    $("send").disabled = false;
+  }
 }
-UI.version();
-for (const id of ["includeSite", "includeExamples"])
-  $(id).onchange = () => build();
-$("copy").onclick = () =>
-  copy().catch(() =>
-    UI.toast("Could not copy. Use Download JSON instead.", true),
-  );
+$("send").onclick = async () => {
+  if (!report || sending || submitted) return;
+  sending = true;
+  $("send").disabled = true;
+  $("send").textContent = "Sending…";
+  UI.toast("Sending report…");
+  try {
+    result(await chrome.runtime.sendMessage({ type: "submit-report", report }));
+  } catch {
+    UI.toast("Extension unavailable. Reopen to retry.", true);
+    $("send").disabled = false;
+  } finally {
+    sending = false;
+    if (!submitted) $("send").textContent = "Send report";
+  }
+};
 $("download").onclick = () => {
   const a = document.createElement("a");
   a.href =
     "data:application/json;charset=utf-8," +
-    encodeURIComponent($("preview").value + "\n");
-  a.download =
-    "price-auto-converter-report-" +
-    new Date().toISOString().slice(0, 10) +
-    ".json";
+    encodeURIComponent(JSON.stringify(report, null, 2) + "\n");
+  a.download = "price-auto-converter-report-" + reportId + ".json";
   document.body.append(a);
   a.click();
   a.remove();
-  UI.toast("Report download requested.");
-};
-$("github").onclick = async () => {
-  try {
-    await copy();
-    await chrome.tabs.create({
-      url: "https://github.com/thedigitalbum/price-auto-converter/issues/new",
-    });
-    UI.toast(
-      "Report copied. Paste it into the GitHub issue before submitting.",
-    );
-  } catch {
-    UI.toast(
-      "Could not copy or open GitHub. Download the report instead.",
-      true,
-    );
-  }
 };
 $("clearEvents").onclick = async () => {
   try {
     await chrome.storage.local.remove("diagnosticEvents");
-    await build();
+    if (!submitted) await build();
     UI.toast("Local error history cleared.");
   } catch {
     UI.toast("Could not clear error history.", true);
   }
 };
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.reportReceipts) {
+    const receipt = (changes.reportReceipts.newValue || []).find(
+      (r) => r.id === reportId,
+    );
+    if (receipt) result({ ok: true, status: "sent", receipt: receipt.receipt });
+  }
+});
 build();
