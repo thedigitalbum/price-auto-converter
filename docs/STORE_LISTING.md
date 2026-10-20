@@ -52,4 +52,10 @@ Primary guidance reviewed 19 October 2026: [Program policies](https://developer.
 
 ## Reporting update — deployed and live-tested
 
-Version 1.1.1 adds host access to the configured script.google.com deployment and script.googleusercontent.com for the response redirect. These send only explicitly submitted diagnostics to the private developer inbox. The Google Sheet remains private; the receiver executes as the developer. Update dashboard disclosures for website hostname and diagnostics transmitted to Google and the developer. The updated privacy policy must be on main before store submission. Anonymous receipts, UUID deduplication, a saved private Sheet row, real Chrome Send and a Gmail JSON digest passed live checks on 20 October 2026.
+Version 1.1.2 includes host access to the configured script.google.com deployment and script.googleusercontent.com for the response redirect. These send only explicitly submitted diagnostics to the private developer inbox. The Google Sheet remains private; the receiver executes as the developer. Update dashboard disclosures for website hostname and diagnostics transmitted to Google and the developer. The updated privacy policy must be on main before store submission. Anonymous receipts, UUID deduplication, a saved private Sheet row, real Chrome Send and a Gmail JSON digest passed live checks on 20 October 2026.
+
+## Final 1.1.2 submission status
+
+Developer registration and payment are complete. The owner approved the final pilot. All 93 tests passed against the packaged 1.1.2 runtime on Google Chrome 113 and 155. Current assets and copy are in the timestamped 1.1.2 submission kit. Browser automation cannot fill or submit the Chrome Web Store dashboard because the browser blocks the extensions gallery. The owner must complete the dashboard and select deferred/manual publishing. See SUBMISSION.md for current data disclosure facts and reviewer instructions.
+
+Additional host justification: the configured script.google.com deployment receives only explicitly submitted, redacted bug reports. script.googleusercontent.com is needed to read Apps Script's redirected JSON receipt. Neither serves executable code to the extension.

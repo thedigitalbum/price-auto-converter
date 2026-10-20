@@ -1,62 +1,38 @@
-> **1.1.1 reporting update:** private anonymous submission replaces GitHub reporting. On 20 October 2026 the deployed receiver passed anonymous receipt/deduplication/Sheet checks, an actual Chrome extension Send test and Gmail digest attachment verification. See docs/BUG_REPORTS.md. Earlier 1.1.0 release instructions below apply only to that release; Chrome Web Store submission remains pending.
+# Chrome Web Store submission — 1.1.2
 
-# Chrome Web Store submission — 1.1.0
+Prepared 20 October 2026 after the owner approved the Chrome pilot and final Amazon stability fixes. Developer registration and payment are complete. Publisher: Harry Rama. Support: thedigitalbum@gmail.com. The dashboard has not been filled or submitted by this work: Chrome blocks browser automation of the extensions gallery.
 
-Prepared 20 October 2026. Owner-confirmed Chrome pilot passed. Publisher name: **Harry Rama**. Public support email: **thedigitalbum@gmail.com**. Developer account registration is still required. No store item or submission has been created.
+## Package
 
-## 1. Create the developer account yourself
+Upload only the extension ZIP named price-auto-converter-v1.1.2-webstore-<timestamp>.zip. Do not upload the larger submission-kit ZIP. Manifest version: 1.1.2. Minimum Chrome: 113.0.5672.63. The upload package is byte-identical to the extracted artifact that passed all 93 tests on official Chrome 113 and 155. The ZIP contains 23 runtime files, with manifest.json at its root; tests and the Google collector source are excluded.
 
-Open [the developer dashboard](https://chrome.google.com/webstore/devconsole) with the Google account you want to own this extension. Complete Google's developer agreement, one-time registration payment and any account verification. Review the fee shown by Google before paying. This is separate from the free bug-reporting system; there is no paid telemetry/backend service.
+## Create the listing
 
-Use an account you control and monitor. Google says the account email cannot simply be changed later; ownership transfer is a separate process. Complete any identity/business/trader declarations according to your circumstances. Do not share payment details, passwords or one-time codes in a support conversation.
+Open https://chrome.google.com/webstore/devconsole and choose New item. Upload the extension ZIP, then use the submission kit's dashboard-fields.txt, listing-description.txt and permission-justifications.txt. Language: English. Category: Shopping if available. Listing name: Price Auto Converter. Default distribution: free, public, all available regions. Review any region-specific account declarations yourself.
 
-## 2. Upload the extension ZIP
+Use the icon128.png, promo-440x280.png and current 1280x800 screenshots from the kit. The conversion screenshot depicts an explicitly labelled demonstration storefront, processed by the real packaged extension using bundled rates. The report and toolbar popup screenshots show real extension UI at its 384px width, centered on a screenshot canvas. No report is sent when capturing assets.
 
-Choose **New item** and upload **price-auto-converter-v1.1.0-webstore.zip**. That ZIP has `manifest.json` at its root, version 1.1.0, minimum Chrome 113.0.5672.63 and no release-candidate label. The submission-kit ZIP contains instructions/assets and must NOT be uploaded as the extension package.
+Privacy policy: https://github.com/thedigitalbum/price-auto-converter/blob/main/PRIVACY.md
+Support: https://github.com/thedigitalbum/price-auto-converter/issues
 
-Record the item ID and dashboard URL after uploading. Keep the same item for future updates, and increment the manifest version for every subsequent package submitted as an update.
+## Privacy practices
 
-## 3. Store listing
+Single purpose: convert supported webpage prices into the user's selected currency, with original-price explanations and per-site controls. All executable code is bundled. Remote code: No. Rates and report responses are JSON data, not scripts executed in Chrome.
 
-Use STORE_LISTING.md for the description and permission justifications. Name: Price Auto Converter. Language: English. Suggested category: Shopping, if available in the current dashboard. Publisher: Harry Rama. Support email: thedigitalbum@gmail.com.
+Disclose Website content, Web history/current-page website information, and Financial/payment information conservatively under Google's current definitions. The extension processes price text and currency evidence locally, uses the current hostname for source inference/site controls, and can encounter monetary amounts. It does not collect a chronological browsing-history database or payment credentials. A user-submitted report transmits the public hostname, relevant settings, rates/counts, masked structure and fixed error codes to a private Google inbox. Exact prices, full URLs, prose, form entries, cookies and credentials are excluded from reports.
 
-Public support: https://github.com/thedigitalbum/price-auto-converter/issues
+Preferences/site rules may sync through Chrome. Rate providers receive normal connection metadata, including IP addresses. Google also processes report transport metadata; the collector does not add IP addresses to Sheet rows. Reports are stored in a private Sheet, emailed as a daily JSON digest and retained for up to 90 days. Email copies must be deleted within 90 days by the maintainer. Offline reports wait locally for up to seven days, maximum five. There are no ads, analytics, data sales, unsolicited crash uploads or credit/lending purposes.
 
-Public privacy policy: https://github.com/thedigitalbum/price-auto-converter/blob/main/PRIVACY.md
+The first data-use checkboxes disclose types handled. The separate policy-certification checkboxes are the publisher's attestations: read and accept them personally only if they accurately describe ongoing practices. Do not certify blanket no-data handling or claim reports never leave the browser. See the current dashboard wording before choosing categories; the kit documents facts rather than making legal attestations for the owner.
 
-Verify the privacy URL loads publicly before submitting. The bundled privacy page has the same practices/contact. No sign-in is needed to use the extension. Upload the supplied 128×128 icon, 440×280 promotional tile, and 1280×800 screenshots. The conversion screenshot uses a clearly labelled demonstration storefront with real extension conversion and bundled rates; it is not a third-party shop endorsement. Other screenshots are actual Settings and report pages.
+## Reviewer test instructions
 
-## 4. Privacy practices
+No login or credentials are required. Install, choose PHP, and open a public page with USD prices. Converted amounts are estimates; hover to see the original and rate. Toggle conversion off and on to verify restoration. Amazon's split main price, variants and normal dynamic updates are supported by regression fixtures. Currency overrides, site pause, styles and an optional fee buffer are available. Report a problem stays inside the toolbar popup; review the disclosure and press Send to submit redacted diagnostics privately. A receipt confirms storage; offline submissions queue and retry. Live rates may fall back to clearly labelled bundled estimates. Iranian toman/IRR, Persian numerals, images/canvas, closed shadow roots, cross-origin frames and some layouts remain unsupported. If a retailer blocks access, choose another public priced page; do not bypass challenges.
 
-Single purpose and each permission justification are ready in STORE_LISTING.md. Remote code: **No**. All JS/CSS is bundled; providers supply JSON data only. No analytics or automatic report upload is implemented.
+## Submit with deferred publishing
 
-Do not choose a blanket “no user data handled” answer: local processing also needs disclosure. Use these conservative recommendations and verify them against the dashboard's exact definitions before certifying:
+Save each dashboard section. Resolve any missing-information errors. Select Submit for review, turn off automatic publishing, then confirm submission. Review any agreement or certification before accepting it. Save the item ID, dashboard URL and resulting review status. After approval, deferred publishing leaves a separate manual release action; Google currently allows up to 30 days to publish a staged item before it reverts to draft.
 
-| Category                                                                                                                              | Recommended treatment and code facts                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Website content                                                                                                                       | Disclose. Price text, currency metadata and element structure are processed locally for conversion; optional original-price fragments can be exported after selection.                                                                                                                                                                                                                                    |
-| Web history / browsing activity                                                                                                       | Disclose current-page address/domain access for currency inference, popup state and site rules. This does not mean a chronological browsing-history database is kept. Hostnames are optional in exported reports; full URLs are excluded.                                                                                                                                                                 |
-| Financial/payment information                                                                                                         | Conservatively disclose local monetary amounts: the extension runs broadly and can encounter personal financial amounts as well as public product prices. It does not intentionally collect payment credentials/card numbers, initiate transactions or send amounts automatically. Users are warned against sharing account/checkout/payment details.                                                     |
-| Personally identifiable information, authentication information, health information, personal communications, location, user activity | Not intentionally collected as separate data categories by the extension. It has no form-value, cookie, history-database, credential, geolocation or activity-tracking API. Broad webpage text can contain sensitive context; conversion reads price fragments locally. If the current definitions encompass incidental page content, disclose that scope rather than certifying an inaccurate exclusion. |
+The latest local tests and owner pilot do not constitute Google approval. No listing or review submission is claimed until the dashboard confirms it.
 
-Preferences/site rules may sync through Chrome. Rates and up to 40 timestamped fixed error codes use local storage. Network rate providers receive normal connection metadata such as IP address; requests omit cookies/referrers and contain no visited-site URL or selected target currency. Reports are previewed locally, hostname/examples default off, and only the user submits a public GitHub issue or shares an exported file. Contact email on this listing is the developer's own support address, not a field collected from extension users.
-
-Read and certify Google's limited-use statements only if they accurately describe your ongoing practices. The implementation has no data sale, advertising/profile use or credit/lending purpose. A third-party review cannot certify how you will handle reports after users send them.
-
-## 5. Distribution and reviewer instructions
-
-Recommended first listing: free, public, all available regions, with publishing deferred until after review. These are recommendations; confirm your preferred audience in the dashboard. Unlisted means anyone with its URL can install it, rather than access being restricted to named testers. All visibility choices still require review.
-
-Reviewer test instructions:
-
-> No login or credentials are required. Install, choose PHP in the popup or Settings, and open a public page with USD prices. Converted amounts have estimate cues; hover to inspect the original/rate. Toggle conversion off to restore originals, then re-enable. Settings offers display styles, website rules, source-symbol choices and an optional fee buffer. Open Report a problem to preview/copy/download local JSON; no report is uploaded automatically. If live rates cannot be fetched, clearly labelled bundled estimates remain available. Supported formats and limitations are described in the listing. Persian-digit/toman, pence-only notation, images/canvas and some embedded layouts remain unsupported.
-
-There is no checkout/payment service inside the extension. If a retailer blocks access, use another public priced page; do not solve or bypass challenges for the review.
-
-## 6. Final review and submission
-
-Confirm package version/hash, icon/screenshots, privacy/support URLs, owner contact, category, data declarations and distribution. At **Submit for review**, choose deferred/manual publishing if you want a separate release decision after acceptance. The developer completes agreements, payment, account attestations and final submission. Save the resulting status and item URL. A submitted/reviewed item is not necessarily published; verify the displayed state.
-
-Google decides acceptance. No account registration or review approval is implied by this package. Once an item is public, retain support/privacy URLs and use the same item ID for updates.
-
-Primary references checked 20 October 2026: [registration](https://developer.chrome.com/docs/webstore/register), [image requirements](https://developer.chrome.com/docs/webstore/images), [local-data disclosure FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq), [privacy fields](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy), [distribution](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution), [submission and deferred publishing](https://developer.chrome.com/docs/webstore/publish).
+References checked 20 October 2026: https://developer.chrome.com/docs/webstore/publish , https://developer.chrome.com/docs/webstore/cws-dashboard-privacy , https://developer.chrome.com/docs/webstore/images
