@@ -533,3 +533,59 @@ textarea,
 input[type="text"] {
   border-color: #697591;
 }
+
+/* Report stays within the toolbar popup, or an inline Settings dialog. */
+body.report-popup {
+  width: 384px;
+  max-width: 100vw;
+}
+.report-popup .report-shell {
+  padding: 18px;
+}
+.report-popup .report-shell .page-head {
+  padding-top: 18px;
+}
+.report-popup h1 {
+  font-size: 24px;
+  letter-spacing: -0.5px;
+}
+.report-popup h2 {
+  font-size: 18px;
+}
+.report-popup .card {
+  padding: 16px;
+}
+.report-popup .notice {
+  font-size: 12px;
+}
+.report-popup .report-preview {
+  max-height: 180px;
+  min-height: 140px !important;
+}
+.report-dialog {
+  width: 404px;
+  max-width: calc(100vw - 20px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.report-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+.report-dialog iframe {
+  width: 100%;
+  height: min(560px, 75vh);
+  border: 0;
+  display: block;
+}
+.report-dialog-close {
+  display: block;
+  margin-left: auto;
+  padding: 6px 12px;
+}
+
+[hidden] {
+  display: none !important;
+}

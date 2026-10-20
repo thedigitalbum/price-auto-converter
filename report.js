@@ -6,6 +6,11 @@ let report = null,
   sending = false,
   submitted = false;
 UI.version();
+const reportView = new URLSearchParams(location.search).get("view");
+if (reportView === "popup" || reportView === "embedded")
+  document.body.classList.add("report-popup");
+if (reportView === "embedded") document.querySelector(".topbar").hidden = true;
+
 async function build() {
   try {
     const [raw, local, ready] = await Promise.all([

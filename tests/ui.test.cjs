@@ -185,11 +185,30 @@ test(
         return original(url, options);
       };
     });
-    const opened = context.waitForEvent("page");
-    await popup.click("#report");
-    const report = await opened;
+    const report = await context.newPage();
+    await report.addInitScript((id) => {
+      chrome.tabs.query = async () => [{ id }];
+    }, shopId);
+    await report.setViewportSize({ width: 384, height: 600 });
+    await report.goto(base + "popup.html");
+    await report.waitForFunction(
+      () => document.querySelector("#stateBadge").textContent === "Active",
+    );
+    const pageCount = context.pages().length;
+    await report.click("#report");
+    await report.waitForURL(/report\.html.*view=popup/);
+    assert.equal(
+      context.pages().length,
+      pageCount,
+      "report stays in the same popup",
+    );
     await report.waitForFunction(
       () => !document.querySelector("#send").disabled,
+    );
+    const sendBounds = await report.locator("#send").boundingBox();
+    assert.ok(
+      sendBounds.y + sendBounds.height <= 600,
+      "Send is visible inside the popup",
     );
     const data = JSON.parse(await report.inputValue("#preview"));
     assert.equal(data.page.hostname, "shop.example");
@@ -216,6 +235,20 @@ test(
       JSON.parse(fs.readFileSync(await file.path(), "utf8")),
       data,
     );
+    const beforeDialog = context.pages().length;
+    await settings.click("#report");
+    await settings.locator(".report-dialog").waitFor({ state: "visible" });
+    await settings
+      .frameLocator(".report-dialog iframe")
+      .locator("#send")
+      .waitFor();
+    assert.equal(
+      context.pages().length,
+      beforeDialog,
+      "Settings report opens inline",
+    );
+    await settings.getByRole("button", { name: "Close", exact: true }).click();
+    await settings.locator(".report-dialog").waitFor({state:"detached"});
     const unsupported = await context.newPage();
     await unsupported.addInitScript(() => {
       chrome.tabs.query = async () => [{ id: -999 }];

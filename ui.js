@@ -50,11 +50,41 @@ const UI = (() => {
     };
   }
   async function openReport(tabId) {
-    await chrome.tabs.create({
-      url:
-        chrome.runtime.getURL("report.html") +
-        (Number.isInteger(tabId) ? "?tabId=" + tabId : ""),
-    });
+    const url = new URL(chrome.runtime.getURL("report.html"));
+    if (Number.isInteger(tabId)) url.searchParams.set("tabId", tabId);
+    if (location.pathname === "/popup.html") {
+      url.searchParams.set("view", "popup");
+      location.assign(url.href);
+      return;
+    }
+    // Settings uses an in-page dialog; reporting never creates a browser tab.
+    const existing = document.querySelector(".report-dialog");
+    if (existing) {
+      existing.focus();
+      return;
+    }
+    url.searchParams.set("view", "embedded");
+    const dialog = document.createElement("dialog");
+    dialog.className = "report-dialog";
+    dialog.setAttribute("aria-label", "Report a problem");
+    const close = document.createElement("button");
+    close.className = "report-dialog-close";
+    close.textContent = "Close";
+    close.onclick = () => dialog.close();
+    const frame = document.createElement("iframe");
+    frame.title = "Report a problem";
+    frame.src = url.href;
+    dialog.append(close, frame);
+    dialog.addEventListener(
+      "close",
+      () => {
+        dialog.remove();
+        el("report")?.focus();
+      },
+      { once: true },
+    );
+    document.body.append(dialog);
+    dialog.showModal();
   }
   function startupError() {
     toast(

@@ -19,12 +19,13 @@ match=re.search(r'[\'"]?endpoint[\'"]?\s*:\s*[\'"]([^\'"]*)',config)
 endpoint=match.group(1) if match else ''
 configured=bool(re.fullmatch(r'https://script\.google\.com/macros/s/[A-Za-z0-9_-]{20,200}/exec',endpoint))
 output=Path(args.output).resolve()
+if output.exists():raise SystemExit('ZIP already exists. Choose a new filename; existing files are never overwritten.')
 if not configured:
     if not args.allow_unconfigured_preview or not output.name.endswith('.preview.zip'):
         raise SystemExit('Report receiver is not configured. Deploy the collector, then run scripts/configure_collector.py. Production ZIP refused.')
 files=json.loads((root/'scripts/package-files.json').read_text(encoding='utf8'))
 output.parent.mkdir(parents=True,exist_ok=True)
-with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as z:
+with zipfile.ZipFile(output,'x',zipfile.ZIP_DEFLATED) as z:
     for name in files:z.write(root/name,name)
 with zipfile.ZipFile(output) as z:
     assert z.testzip() is None and set(z.namelist())==set(files)
