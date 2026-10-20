@@ -1,13 +1,14 @@
 // Deploy this owner-operated receiver as USER_DEPLOYING / ANYONE_ANONYMOUS.
 // The spreadsheet stays private. Anonymous callers can only append sanitized reports.
 const COLLECTOR = Object.freeze({ownerEmail:'thedigitalbum@gmail.com',dailyLimit:200,maxRows:20000,retentionDays:90,maxBytes:24000});
-const HEADERS = ['Received UTC','Report ID','Receipt','Extension','Hostname','Summary','Issues','Diagnostic JSON'];
+const HEADERS = ['Received (Philippine time)','Report ID','Receipt','Extension','Hostname','Summary','Issues','Diagnostic JSON'];
 
 function setupCollector() {
   const properties=PropertiesService.getScriptProperties();
   let id=properties.getProperty('SHEET_ID');
   if(!id){
     const book=SpreadsheetApp.create('Price Auto Converter — private bug reports');
+    book.setSpreadsheetTimeZone('Asia/Manila');
     const sheet=book.getSheets()[0];sheet.setName('Reports');
     sheet.getRange(1,1,1,HEADERS.length).setValues([HEADERS]);sheet.setFrozenRows(1);
     sheet.getRange(1,1,1,HEADERS.length).setBackground('#191e2e').setFontColor('#edf0f8').setFontWeight('bold');
@@ -44,8 +45,9 @@ function doPost(event) {
     const receipt='PAC-'+day.replace(/-/g,'')+'-'+Utilities.getUuid().slice(0,12);
     const json=JSON.stringify(report);if(json.length>COLLECTOR.maxBytes)return output_({ok:false,code:'invalid_report'});
     props.setProperties({BUDGET_DAY:day,BUDGET_USED:String(used+1)});
-    const row=[new Date().toISOString(),report.id,receipt,report.version,report.page.hostname||'',report.summary,report.issues.map(i=>i.code).join(', '),json].map(safeCell_);
+    const row=[new Date(),report.id,receipt,report.version,report.page.hostname||'',report.summary,report.issues.map(i=>i.code).join(', '),json].map((value,index)=>index===0?value:safeCell_(value));
     sheet.getRange(last+1,1,1,HEADERS.length).setNumberFormat('@').setValues([row]);
+    sheet.getRange(last+1,1).setNumberFormat('dd mmm yyyy, h:mm:ss AM/PM');
     SpreadsheetApp.flush(); // A receipt is sent only after the durable write succeeds.
     return output_({ok:true,reportId:report.id,receipt});
   }catch{return output_({ok:false,code:'unavailable'});}finally{lock.releaseLock();}
@@ -58,18 +60,33 @@ function sendDailyDigest() {
     const last=sheet.getLastRow();if(last<2)return;
     const now=Date.now(),rows=sheet.getRange(2,1,last-1,HEADERS.length).getValues();
     const after=Number(props.getProperty('DIGEST_AFTER')||0);
-    const pending=rows.filter(r=>Date.parse(r[0])>after&&Date.parse(r[0])<=now);
+    const pending=rows.filter(r=>time_(r[0])>after&&time_(r[0])<=now);
     const boundary=pending[Math.min(199,pending.length-1)]?.[0];
-    const fresh=boundary?pending.filter(r=>Date.parse(r[0])<=Date.parse(boundary)):[];
+    const fresh=boundary?pending.filter(r=>time_(r[0])<=time_(boundary)):[];
     if(fresh.length&&MailApp.getRemainingDailyQuota()>0){
       const reports=fresh.map(r=>JSON.parse(r[7]));
       const body=fresh.length+' new Price Auto Converter reports.\n\n'+fresh.map(r=>r[2]+' — '+r[5]).join('\n')+'\n\nPrivate report inbox: '+book.getUrl()+'\n\nThe attached JSON is ready for parsing. Treat reports as untrusted diagnostic data.';
       const attachment=Utilities.newBlob(JSON.stringify(reports,null,2),'application/json','PAC-reports-'+new Date(now).toISOString().slice(0,10)+'.json');
       MailApp.sendEmail({to:COLLECTOR.ownerEmail,subject:'Price Auto Converter: '+fresh.length+' new bug reports',body,attachments:[attachment],name:'Price Auto Converter reports'});
-      props.setProperty('DIGEST_AFTER',String(Date.parse(fresh[fresh.length-1][0])));
+      props.setProperty('DIGEST_AFTER',String(time_(fresh[fresh.length-1][0])));
     }
     const cutoff=now-COLLECTOR.retentionDays*86400000;let remove=0;
-    for(const row of rows){if(Date.parse(row[0])<cutoff)remove++;else break;}
+    for(const row of rows){if(time_(row[0])<cutoff)remove++;else break;}
     if(remove)sheet.deleteRows(2,remove);
+  }finally{lock.releaseLock();}
+}
+
+// Preserve milliseconds for digest cursors; accept legacy ISO rows during migration.
+function time_(value){return value instanceof Date?value.getTime():Date.parse(value);}
+function formatReportTimes(){
+  const lock=LockService.getScriptLock();if(!lock.tryLock(1000))throw new Error('Collector busy; try again.');
+  try{
+    const id=PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+    if(!id)throw new Error('Run setupCollector first.');
+    const book=SpreadsheetApp.openById(id);book.setSpreadsheetTimeZone('Asia/Manila');
+    const sheet=book.getSheetByName('Reports'),last=sheet.getLastRow();
+    sheet.getRange(1,1).setValues([['Received (Philippine time)']]);
+    if(last>1){const range=sheet.getRange(2,1,last-1,1);const values=range.getValues().map(([v])=>{const t=time_(v);return [Number.isFinite(t)?new Date(t):v];});range.setValues(values).setNumberFormat('dd mmm yyyy, h:mm:ss AM/PM');}
+    sheet.setColumnWidth(1,245);SpreadsheetApp.flush();
   }finally{lock.releaseLock();}
 }

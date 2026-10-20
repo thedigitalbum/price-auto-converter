@@ -48,14 +48,14 @@ const root = path.resolve(__dirname, "..");
     await button.click();
     await report.waitForFunction(
       () =>
-        /received|saved on this device/i.test(
+        /report sent|saved on this device/i.test(
           document.querySelector("#summary").textContent,
         ),
       {},
       { timeout: 45000 },
     );
     let status = await report.locator("#summary").innerText();
-    if (!/received/i.test(status)) {
+    if (!/report sent/i.test(status)) {
       await worker.evaluate(() => REPORT_DELIVERY.flush());
       status = await report.locator("#summary").innerText();
     }
@@ -80,7 +80,7 @@ const root = path.resolve(__dirname, "..");
       ),
     );
     console.log(JSON.stringify({ status, ...saved }, null, 2));
-    assert.match(status, /received/i);
+    assert.match(status, /report sent/i);
   } finally {
     await context.close();
   }

@@ -59,7 +59,11 @@ async function build() {
 function result(r) {
   if (r?.ok && r.status === "sent") {
     submitted = true;
-    $("summary").textContent = "Report received";
+    document.querySelector("h1").textContent = "Thanks for helping!";
+    $("summary").textContent = "Report sent 🎉";
+    $("context").textContent = "You’re helping make price conversion better.";
+    $("disclosure").hidden = true;
+    $("send").hidden = true;
     UI.toast("Reference: " + r.receipt);
     $("send").textContent = "Sent";
     $("send").disabled = true;

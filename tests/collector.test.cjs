@@ -87,6 +87,7 @@ function collector() {
     deleteRows: (r, n) => rows.splice(r - 1, n),
   };
   const book = {
+    setSpreadsheetTimeZone() {},
     getSheetByName: () => sheet,
     getUrl: () => "https://docs.google.com/spreadsheets/d/private-sheet/edit",
     getId: () => "private-sheet",
@@ -267,3 +268,5 @@ test("Shared sanitizer is byte-identical in the extension and deployed-source bu
     fs.readFileSync(path.join(repo, "report-core.js"), "utf8"),
   );
 });
+
+test("Readable Sheet dates preserve digest milliseconds and migrate legacy timestamps",()=>{const c=collector();const raw=payload();c.post(raw);assert.ok(c.rows[1][0] instanceof Date);const t=c.rows[1][0].getTime();c.rows[1][0]=new Date(t).toISOString();c.run("formatReportTimes()");assert.ok(c.rows[1][0] instanceof Date);assert.equal(c.rows[1][0].getTime(),t);c.run("sendDailyDigest()");c.run("sendDailyDigest()");assert.equal(c.mails.length,1);});
