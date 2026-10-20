@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const root = process.env.SOURCE_DIR || path.join(__dirname, '..');
-const browserReady = chromium.launch({ headless: true });
+const {browserOptions,verifyBrowser}=require('./browser.cjs');
+const browserReady = chromium.launch({ headless: true,...browserOptions() }).then(async b=>{await verifyBrowser(b);return b;});
 after(async () => (await browserReady).close());
 const rates = { USD: 1, PHP: 56, CAD: 1.4, MYR: 4, TRY: 40, NGN: 1600, CLP: 1000, COP: 4000, HKD: 8, EUR: 0.9, KWD: 0.3, PLN: 4 };
 async function fixture(t, body, { url = 'https://shop.example/', currency = 'USD' } = {}) {
@@ -17,7 +18,7 @@ async function fixture(t, body, { url = 'https://shop.example/', currency = 'USD
   await page.evaluate(({ rates }) => {
     const storageListeners = [], messages = [];
     window.chrome = {
-      runtime: { id: 'test', getManifest: () => ({ version: '1.0.8' }), sendMessage: async () => ({}), onMessage: { addListener: fn => messages.push(fn) } },
+      runtime: { id: 'test', getManifest: () => ({ version: '1.1.0' }), sendMessage: async msg => {if(msg.type==='diagnostic-event')window.diagnosticCodes.push(msg.code);return {};}, onMessage: { addListener: fn => messages.push(fn) } },
       storage: {
         sync: { get: async defaults => ({ ...defaults, target: 'PHP' }), set: async () => {} },
         local: { get: async () => ({ rates, ratesBundled: false }) },
@@ -26,9 +27,11 @@ async function fixture(t, body, { url = 'https://shop.example/', currency = 'USD
     };
     window.setSettings = obj => storageListeners.forEach(fn => fn(Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, { newValue: v }])), 'sync'));
     window.setRates = rates => storageListeners.forEach(fn => fn({ rates: { newValue: rates } }, 'local'));
+    window.diagnosticCodes=[];
     window.statusOfExtension = () => { let state; for (const fn of messages) fn({ type: 'status' }, { id: 'test' }, r => state = r); return state; };
   }, { rates });
   await page.addScriptTag({ path: path.join(root, 'lib.js') });
+  await page.addScriptTag({ path: path.join(root, 'diagnostics.js') });
   await page.addScriptTag({ path: path.join(root, 'content.js') });
   return page;
 }
@@ -37,6 +40,31 @@ async function text(page, selector, expected) {
     await page.waitForFunction(({ selector, expected }) => document.querySelector(selector)?.textContent.replace(/\s+/g, ' ').trim() === expected, { selector, expected }, { timeout: 7000 });
   } catch (e) { throw new Error(`${selector}: expected ${expected}; got ${await page.textContent(selector)}`, { cause: e }); }
 }
+
+test('Editing fields, code and Amazon-style prices inside editors stay untouched',async t=>{
+ const p=await fixture(t,'<div contenteditable="plaintext-only" id="edit">USD 100<div class="a-price"><span class="a-offscreen">$10</span><span aria-hidden="true">$10</span></div></div><textarea>USD 100</textarea><code id="code">USD 100</code><p id="price" class="price-private-account">USD 100</p>');
+ await text(p,'#price','≈ ₱5,600.00');await text(p,'#code','USD 100');assert.equal(await p.textContent('#edit'),'USD 100$10$10');
+ const report=await p.evaluate(()=>statusOfExtension());assert.deepEqual(report.shapes,['p.price']);assert.ok(!JSON.stringify(report).includes('private-account'));
+});
+
+test('An internal conversion failure pauses, restores originals and records a fixed code',async t=>{
+ const p=await fixture(t,'<p id="price">USD 100</p>');await text(p,'#price','≈ ₱5,600.00');
+ await p.evaluate(()=>{PC.find=()=>{throw new Error('PRIVATE failure details');};const el=document.createElement('p');el.textContent='USD 20';document.body.append(el);});
+ await p.waitForFunction(()=>statusOfExtension().state==='error');await text(p,'#price','USD 100');
+ assert.deepEqual(await p.evaluate(()=>diagnosticCodes),['conversion_failed']);
+});
+
+test('A country storefront wins over stray currency-looking product text',async t=>{
+ const p=await fixture(t,'<p>COP 120</p><section><p id="price" class="price">100.00</p></section>',{url:'https://www.lazada.com.my/',currency:''});
+ await text(p,'#price','≈ ₱1,400.00');assert.equal(await p.evaluate(()=>statusOfExtension().bare),'MYR');
+});
+
+test('A batch of dynamic product prices converts and restores without duplicating',async t=>{
+ const p=await fixture(t,'<main id="products"></main>');
+ await p.evaluate(()=>{const f=document.createDocumentFragment();for(let i=0;i<200;i++){const el=document.createElement('p');el.className='price';el.textContent='USD '+(i+1);f.append(el);}document.querySelector('main').append(f);});
+ await p.waitForFunction(()=>[...document.querySelectorAll('.price')].every(p=>p.textContent.startsWith('≈')));
+ assert.equal(await p.locator('.price').count(),200);await p.evaluate(()=>setSettings({enabled:false}));await text(p,'.price','USD 1');assert.equal(await p.locator('.price').last().textContent(),'USD 200');
+});
 test('Superscript and small-font cents are assembled once', async t => {
   const p = await fixture(t, '<div class="price" id="sup"><span>$19</span><sup>99</sup></div><div id="small" class="price"><span style="font-size:24px" data-testid="ugpp-reduced-price-display">20</span><span style="font-size:12px">97</span></div>');
   await text(p, '#sup', '≈ ₱1,119.44');

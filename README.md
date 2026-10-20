@@ -1,111 +1,61 @@
-# Price Auto Converter – Convert Prices to Your Currency (Chrome extension)
+# Price Auto Converter
 
-Converts prices on any web page into the currency you pick.
+Convert supported prices into a familiar currency while browsing. Amounts are estimates; hover a converted price to see its original and the rate used. The shop and your bank determine what you actually pay.
 
-Every converted price is marked so nobody mistakes it for the shop's own price: a small `≈`
-before it, a faint tint and a dotted underline (all painted on top of the text, so page layout
-doesn't move). Hover a converted price to see the original price, the rate used, and a note that
-the browser extension converted it. Choose a lighter style in Settings.
+**1.1.0 is prepared for Chrome Web Store submission.** The owner confirmed the Chrome pilot passed on 20 October 2026. It has not yet been submitted or published on the store. See [release readiness](docs/RELEASE_READINESS.md) for evidence and [submission instructions](docs/SUBMISSION.md) for the account and dashboard steps.
 
-## Install (no Web Store needed)
-1. Unzip this folder somewhere permanent.
-2. Open `chrome://extensions` and switch on **Developer mode** (top right).
-3. Click **Load unpacked** and choose the `price-converter` folder.
-4. The settings page opens. Pick your currency. Done.
+## Install manually
 
-Pin the extension (puzzle-piece menu). Clicking its icon opens a small panel with:
-- **Convert prices on this site** switch: turns the extension off/on for the current site only
-  (the icon shows an `OFF` badge on disabled sites).
-- A status line, and a **Settings** button.
-- **Missed a price? Copy details**: copies a short description of prices that weren't converted (element
-  names and short price text only, no web address or personal text) so it can be fixed.
+1. Extract the release ZIP to a permanent folder.
+2. Open `chrome://extensions`, enable Developer mode and choose **Load unpacked**.
+3. Select the extracted folder containing `manifest.json`.
+4. Pick your currency in Settings. If another copy is installed, disable it so only one copy converts prices.
 
-**Smarter symbols.** `$`, `¥`, `kr`, `Rs` and `R` mean different currencies in different countries,
-so Price Auto Converter reads the site first (product data, its address such as `.com.au`, its
-language) and only then falls back to USD / JPY / INR. `kr` and `R` are only converted when the
-page makes clear which krona or rand it is. Pick fixed meanings in Settings if you prefer.
+To update an existing unpacked installation, replace its files, click Reload on the extension card, then reload shopping tabs. A newly loaded folder may have a different extension ID and separate settings.
 
-**Card fee buffer.** Add 0 to +5% (0.5% steps) on top of the rate, in the panel or in Settings.
+## Everyday controls
 
-**Offline.** Approximate rates ship inside the extension and are used until live rates download
-(and whenever the network is down). The panel says when rates are built-in or more than 2 days old.
+- Popup: choose a target currency, pause conversion on the current hostname, correct the source currency, add an optional card fee buffer, refresh rates or prepare a report.
+- Settings: change global conversion, ambiguous `$`/`¥` behavior, estimate indicators, rounding and website rules.
+- A website pause includes subdomains. More-specific exceptions let one subdomain stay active without enabling its siblings.
+- Supported dynamic prices and open shadow roots are scanned as pages update. A shop's currency menu gets time to finish updating before conversion resumes.
+- Provider timestamps and offline fallback rates are clearly identified. Live rate requests refresh every six hours; a failed refresh keeps existing estimates.
 
-**Reading the icon badge** (per tab; hover the icon for a one-line explanation):
-- **Amber `!`**: exchange rates haven't loaded yet (open the panel or Settings and press Refresh).
-- **Amber number** (e.g. `3`): that many prices on the page show no currency and it couldn't be
-  worked out. Open the panel and pick the currency.
-- **Grey `OFF`**: switched off on this site.
-- **No badge**: nothing needed, all good.
+The badge shows `OFF` when paused, `!` when rates need attention, or a count of price candidates whose source is unknown. An empty badge does not certify that every price was found.
 
-**Sites with their own currency converter** (for example a Shopify store with a currency menu) are
-detected automatically, and prices are still converted to your currency with no clicks, whether or
-not the site's menu offers it. To avoid clashing with the site's script, conversion starts about a
-second after load, and if you use the site's own currency menu the extension steps aside for that
-moment and converts again once the site has finished. If a site still misbehaves, switch the
-extension off for it with the panel's site switch.
+## Report a problem — free, with no automatic uploads
 
-**Smarter symbols.** `$`, `¥`, `kr`, `Rs` and `R` mean different currencies in different countries,
-so Price Auto Converter reads the site first (product data, its address such as `.com.au`, its
-language) and only then falls back to USD / JPY / INR. `kr` and `R` are only converted when the
-page makes clear which krona or rand it is. Pick fixed meanings in Settings if you prefer.
+Click **Report a problem** in the website's popup. Review the JSON, optionally include the hostname and up to five original price examples, then **Copy report** or **Download JSON**. **Copy report & open GitHub** opens a public issue form; paste the JSON and describe the expected and actual behavior. You submit it yourself. GitHub requires an account; export does not.
 
-**Card fee buffer.** Add 0 to +5% (0.5% steps) on top of the rate, in the panel or in Settings.
+No hosted logging service, API token, telemetry subscription or paid backend is needed. Reports have a stable schema (`price-auto-converter-report/1`) so the maintainer can forward them for debugging. The extension keeps only up to 40 timestamped, fixed error codes locally. It does not capture stack traces, form values, cookies or browsing history. Hostnames and price examples are excluded from exported reports unless selected. See [privacy](PRIVACY.md) and [support workflow](docs/BUG_REPORTS.md).
 
-**Offline.** Approximate rates ship inside the extension and are used until live rates download
-(and whenever the network is down). The panel says when rates are built-in or more than 2 days old.
+## Honest limits
 
-**Reading the icon badge** (per tab; hover the icon for a one-line explanation):
-- **Amber `!`**: exchange rates haven't loaded yet (open the panel or Settings and press Refresh).
-- **Amber number** (e.g. `3`): that many prices on the page show no currency and it couldn't be
-  worked out. Open the panel and pick the currency.
-- **Grey `OFF`**: switched off on this site.
-- **No badge**: nothing needed, all good.
+- This is a display aid, not a checkout, tax, bank or guaranteed real-time rate calculator.
+- Images, canvas-rendered prices, closed shadow roots and embedded cross-origin frames are unsupported.
+- Persian and Arabic digit prices, Iranian toman/IRR handling, and pence-only notation such as `50p` are unsupported. Digikala therefore remains outside current conversion coverage.
+- A shared-label range such as `$10–20` stays unchanged; repeated labels such as `$10–$20` are supported. `Ft` requires independent Hungarian currency context to avoid converting feet in product dimensions.
+- `$` and `¥` can be ambiguous. Without evidence, they fall back to USD and JPY. The popup lets you correct the source for a site.
+- Access denials, CAPTCHA, browser-internal pages and Web Store pages cannot be validated or converted normally. New site layouts can require fixes. Pause a site if conversion interferes with it.
+- Hover originals are a pointer interaction. A full screen-reader review of third-party shopping pages remains a release pilot item; automated accessibility checks cover the extension's own screens.
 
-## Test it
-- Open `test.html` in Chrome. For `file://` pages, first go to the extension's
-  **Details** on `chrome://extensions` and turn on **Allow access to file URLs**.
-  Or serve the folder: `python -m http.server 8000` then visit `localhost:8000/test.html`.
-- Then try a real shop or news site.
+## Chrome compatibility
 
-## After you change code
-`chrome://extensions` → click the reload arrow on the extension, then refresh the page.
-Errors: **Details → Inspect views → service worker** (background), or DevTools console (page).
+Desktop Google Chrome only. The declared minimum is **113.0.5672.63**, deliberately raised from the unverified 105 claim. The complete suite passed on official Chrome for Testing 113.0.5672.63 and 155.0.8059.84 on Windows. The historical Chromium development runs remain supplementary evidence, not a separate browser support target. See [Chrome version evidence](docs/CHROME_COMPATIBILITY.md).
 
-## Automated regression tests
-Requires Node.js and npm. From the repository folder:
-```
-npm install
-npx playwright install chromium
+## Development and validation
+
+Node.js 22 or newer:
+
+```sh
+npm ci
+npx playwright install-deps chromium
+python3 scripts/install_test_chrome.py stable
 npm test
 ```
-The tests use fixed exchange rates and local HTML fixtures. They cover number parsing,
-split cents and currency labels, non-price text, currency detection and switching, late
-metadata, dynamic updates, shadow DOM, rate refreshes, and restoration. One test loads
-the actual unpacked extension in a separate Chromium profile. Your regular Chrome
-profile is not changed. Test profiles are stored in `test-results/`.
 
-To install a test ZIP, extract it, open `chrome://extensions`, enable **Developer mode**,
-and choose **Load unpacked** → the extracted folder containing `manifest.json`.
-Disable the previous copy first to prevent two versions converting the same page.
-After an update, reload the extension and refresh the pages being tested.
+The pinned development tools are not shipped in the extension. Tests cover parser boundaries and grouping, adversarial input, currency inference, separate price blocks, editable fields, split cents, dynamic updates/restoration, shadow DOM, storage, worker failures, report privacy/export, UI persistence, responsive layout and automated WCAG checks. Two tests load the actual unpacked extension into isolated Google Chrome profiles; no personal Chrome profile is modified. Fixtures use deterministic rates and no live network.
 
-## Files
-- `manifest.json` – extension config (Manifest V3)
-- `background.js` – fetches/caches exchange rates every 6 hours
-- `lib.js` – price detection, parsing, conversion, formatting
-- `content.js` / `content.css` – converts text on pages, live updates, hover tooltip
-- `options.html` / `options.js` – settings page
-- `popup.html` / `popup.js` – toolbar icon panel (per-site switch, status)
+`SOURCE_DIR` can point the suite at an extracted release package. `UI_SCREENSHOTS` optionally saves popup, settings and report previews. CI tests pull requests and pushes; the tag release workflow runs tests before packaging. Live shopping pages require separate testing because fixtures cannot prove compatibility with every layout.
 
-© 2026 Harry Rama. Released under the MIT License (see `LICENSE`).
-
-## For developers
-- Console diagnostics are off. To turn them on, open the settings page, press F12 and run
-  `chrome.storage.sync.set({ debug: true })`, then reload the tab you're testing.
-- Chrome Web Store / Load unpacked package: include `manifest.json`, `background.js`,
-  `content.js`, `content.css`, `lib.js`, `options.html`, `options.js`, `popup.html`,
-  `popup.js`, `fallback-rates.json`, `LICENSE` and `icons/`. Keep `manifest.json` at
-  the top level. Exclude tests, dependencies, profiles and Git metadata.
-
-## Support
-Free forever. If it saves you time, you can support it on Ko-fi: https://ko-fi.com/harryrama
+MIT license · Harry Rama. Rate providers: [ExchangeRate-API](https://www.exchangerate-api.com/) and [currency-api](https://github.com/fawazahmed0/exchange-api). [Support development](https://ko-fi.com/harryrama).

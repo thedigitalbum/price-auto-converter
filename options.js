@@ -1,123 +1,210 @@
-try { document.getElementById('ver').textContent = 'Version ' + chrome.runtime.getManifest().version; } catch (e) { /* version label is optional */ }
-// Copyright (c) 2026 Harry Rama. MIT License (see LICENSE).
-const $ = (id) => document.getElementById(id);
-const COMMON = ['USD', 'EUR', 'GBP', 'JPY', 'PHP', 'CAD', 'AUD', 'SGD', 'HKD', 'CNY', 'KRW', 'INR', 'THB', 'MYR', 'IDR', 'VND', 'AED', 'CHF'];
-let rates = null;
-let saveTimer = null;
-let names = null;
-try { names = new Intl.DisplayNames(['en'], { type: 'currency' }); } catch {}
-
-const label = (c) => { let n = c; try { n = (names && names.of(c)) || c; } catch {} return n === c ? c : `${c} — ${n}`; };
-
-function fillCurrencies(selected) {
-  const codes = rates ? Object.keys(rates).sort() : COMMON;
-  const list = codes.includes(selected) ? codes : [selected, ...codes];
-  $('target').replaceChildren(...list.map((c) => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = label(c);
-    return o;
-  }));
-  $('target').value = selected;
-}
-
-const normSites = (v) => v.split('\n')
-  .map((s) => s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, ''))
-  .filter(Boolean).join('\n');
-
-function readForm() {
+const $ = UI.el;
+let cfg = PC.settings(),
+  rates = null,
+  local = {},
+  siteDirty = false;
+const conversionKeys = [
+  "enabled",
+  "target",
+  "dollarMode",
+  "yenMode",
+  "fxBuffer",
+  "indicator",
+  "whole",
+];
+function formValues() {
   return {
-    enabled: $('enabled').checked,
-    target: $('target').value,
-    dollarMode: $('dollarMode').value,
-    yenMode: $('yenMode').value,
-    fxBuffer: Number($('fxBuffer').value) || 0,
-    indicator: $('indicator').value,
-    whole: $('whole').checked,
-    excluded: normSites($('excluded').value)
+    enabled: $("enabled").checked,
+    target: $("target").value,
+    dollarMode: $("dollarMode").value,
+    yenMode: $("yenMode").value,
+    fxBuffer: Number($("fxBuffer").value),
+    indicator: $("indicator").value,
+    whole: $("whole").checked,
   };
 }
-
-function updatePreview() {
-  const el = $('preview');
-  if (!rates) { el.textContent = 'Waiting for exchange rates…'; return; }
-  const f = readForm();
-  const dollar = f.dollarMode === 'auto' ? 'USD' : f.dollarMode;
-  if (dollar === f.target) { el.textContent = `$ already means ${f.target} — nothing to convert for $ prices.`; return; }
-  const v = PC.convert(100, dollar, f.target, rates) * (1 + f.fxBuffer / 100);
-  const shown = PC.formatMoney(v, f.target, { whole: f.whole });
-  el.textContent = `$100 (${dollar}${f.dollarMode === 'auto' ? ', or the site’s own dollar' : ''}) → ${f.indicator === 'minimal' ? '' : '≈\u202F'}${shown}`;
-}
-
-function updateRatesInfo(updated, source, error) {
-  if (error) { $('ratesInfo').textContent = 'Could not fetch rates: ' + error; return; }
-  $('ratesInfo').textContent = updated
-    ? `${Object.keys(rates).length} currencies · updated ${new Date(updated).toLocaleString()} · ${source || ''}`
-    : 'No rates yet — fetching…';
-}
-
-function flash(text, bad) {
-  const el = $('saved');
-  el.textContent = text;
-  el.classList.toggle('bad', !!bad);
-  el.classList.add('on');
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => el.classList.remove('on'), bad ? 5000 : 1500);
-}
-
-async function save() {
-  const r = await PC.saveSync(readForm());
-  flash(r.ok ? 'Saved ✓' : r.error, !r.ok);
-  updatePreview();
-}
-
-async function refresh() {
-  $('refresh').disabled = true;
-  $('ratesInfo').textContent = 'Fetching…';
-  try {
-    const r = await chrome.runtime.sendMessage({ type: 'refresh-rates' });
-    if (r && r.ok === false) updateRatesInfo(0, '', r.error);
-  } catch (e) {
-    updateRatesInfo(0, '', String(e.message || e));
+function renderForm() {
+  UI.currencies(
+    $("target"),
+    Object.keys(rates || {}).length
+      ? Object.keys(rates)
+      : ["USD", "EUR", "PHP", "JPY"],
+    cfg.target,
+  );
+  for (const key of conversionKeys) {
+    if (["enabled", "whole"].includes(key)) $(key).checked = cfg[key];
+    else $(key).value = cfg[key];
   }
-  $('refresh').disabled = false;
+  preview();
 }
-
+function preview() {
+  const from = cfg.dollarMode === "auto" ? "USD" : cfg.dollarMode;
+  if (!rates?.[from] || !rates?.[cfg.target]) {
+    $("preview").textContent =
+      "Preview will appear when rates are available for this currency.";
+    return;
+  }
+  if (from === cfg.target) {
+    $("preview").textContent =
+      `$100 already means ${cfg.target}. No conversion needed.`;
+    return;
+  }
+  const value =
+    PC.convert(100, from, cfg.target, rates) * (1 + cfg.fxBuffer / 100);
+  $("preview").textContent =
+    `100 ${from} ≈ ${PC.formatMoney(value, cfg.target, { whole: cfg.whole })}`;
+}
+function renderRates() {
+  const text = UI.ratesText(local);
+  $("ratesTitle").textContent = text.title;
+  $("ratesTitle").style.color = text.warn ? "var(--warn)" : "var(--cyan)";
+  $("ratesInfo").textContent = text.detail;
+}
+async function saveConversion() {
+  const next = PC.settings({ ...cfg, ...formValues() });
+  const result = await PC.saveSync(
+    Object.fromEntries(conversionKeys.map((k) => [k, next[k]])),
+  );
+  if (result.ok) {
+    cfg = next;
+    preview();
+    UI.toast("Saved");
+  } else {
+    renderForm();
+    UI.toast(result.error, true);
+  }
+}
+function normalizeHosts(value) {
+  return [
+    ...new Set(
+      value
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const url = new URL(
+            /^https?:\/\//i.test(line) ? line : "https://" + line,
+          );
+          if (
+            !["http:", "https:"].includes(url.protocol) ||
+            url.username ||
+            url.password ||
+            !url.hostname
+          )
+            throw new Error("Enter a valid website hostname on each line.");
+          return url.hostname.toLowerCase().replace(/^www\./, "");
+        }),
+    ),
+  ].join("\n");
+}
 async function main() {
+  UI.version();
+  $("report").onclick = () => UI.openReport(null).catch(UI.startupError);
+  for (let i = 0; i <= 10; i++) {
+    const o = document.createElement("option");
+    o.value = i / 2;
+    o.textContent = i ? `+${i / 2}%` : "None (0%)";
+    $("fxBuffer").append(o);
+  }
+  const auto = document.createElement("option");
+  auto.value = "auto";
+  auto.textContent = "Auto-detect";
+  $("dollarMode").append(auto);
+  for (const c of PC.FAMILY.dollar) {
+    const o = document.createElement("option");
+    o.value = c;
+    o.textContent = c;
+    $("dollarMode").append(o);
+  }
   const [s, l] = await Promise.all([
     chrome.storage.sync.get(PC.DEFAULTS),
-    chrome.storage.local.get(['rates', 'ratesUpdated', 'ratesSource'])
+    chrome.storage.local.get([
+      "rates",
+      "ratesUpdated",
+      "ratesSource",
+      "ratesBundled",
+      "ratesError",
+    ]),
   ]);
-  const cfg = { ...PC.DEFAULTS, ...s };
+  cfg = PC.settings(s);
+  local = l;
   rates = l.rates || null;
-  fillCurrencies(cfg.target);
-  $('enabled').checked = cfg.enabled;
-  for (let i = 0; i <= 10; i++) {
-    const o = document.createElement('option');
-    o.value = String(i / 2);
-    o.textContent = i === 0 ? 'None (0%)' : `+${i / 2}%`;
-    $('fxBuffer').appendChild(o);
-  }
-  $('fxBuffer').value = String(Math.min(5, Math.max(0, Math.round((Number(cfg.fxBuffer) || 0) * 2) / 2)));
-  $('dollarMode').value = cfg.dollarMode;
-  $('yenMode').value = cfg.yenMode;
-  $('indicator').value = cfg.indicator === 'underline' ? 'standard' : cfg.indicator;
-  $('whole').checked = cfg.whole;
-  $('excluded').value = cfg.excluded;
-  updateRatesInfo(l.ratesUpdated, l.ratesSource);
-  updatePreview();
-  if (!rates) refresh();
-
-  document.querySelectorAll('select, input[type=checkbox]').forEach((el) => el.addEventListener('change', save));
-  let t;
-  ['excluded'].forEach((id) => $(id).addEventListener('input', () => { clearTimeout(t); t = setTimeout(save, 500); }));
-  $('refresh').addEventListener('click', refresh);
-
-  chrome.storage.onChanged.addListener((ch, area) => {
-    if (area !== 'local' || !ch.rates) return;
-    rates = ch.rates.newValue;
-    fillCurrencies($('target').value || cfg.target);
-    chrome.storage.local.get(['ratesUpdated', 'ratesSource']).then((x) => updateRatesInfo(x.ratesUpdated, x.ratesSource));
-    updatePreview();
+  renderForm();
+  renderRates();
+  $("excluded").value = cfg.excluded;
+  $("included").value = cfg.included;
+  for (const key of conversionKeys)
+    $(key).addEventListener("change", () =>
+      saveConversion().catch(UI.startupError),
+    );
+  for (const key of ["excluded", "included"])
+    $(key).addEventListener("input", () => {
+      siteDirty = true;
+      UI.toast("Website rules have unsaved changes");
+    });
+  $("siteForm").onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const next = {
+        excluded: normalizeHosts($("excluded").value),
+        included: normalizeHosts($("included").value),
+      };
+      const result = await PC.saveSync(next);
+      if (!result.ok) {
+        UI.toast(result.error, true);
+        return;
+      }
+      cfg = { ...cfg, ...next };
+      $("excluded").value = cfg.excluded;
+      $("included").value = cfg.included;
+      siteDirty = false;
+      UI.toast("Website rules saved");
+    } catch (error) {
+      UI.toast(error.message || "Could not save website rules.", true);
+    }
+  };
+  $("refresh").onclick = async () => {
+    const b = $("refresh");
+    b.disabled = true;
+    try {
+      const r = await chrome.runtime.sendMessage({ type: "refresh-rates" });
+      local = await chrome.storage.local.get([
+        "rates",
+        "ratesUpdated",
+        "ratesSource",
+        "ratesBundled",
+        "ratesError",
+      ]);
+      rates = local.rates || null;
+      renderForm();
+      renderRates();
+      UI.toast(
+        r?.ok === false
+          ? "Refresh failed. Existing estimates remain available."
+          : "Rates refreshed",
+        r?.ok === false,
+      );
+    } catch {
+      UI.toast("Could not refresh rates. Please try again.", true);
+    } finally {
+      b.disabled = false;
+    }
+  };
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "sync") {
+      for (const [k, v] of Object.entries(changes)) cfg[k] = v.newValue;
+      cfg = PC.settings(cfg);
+      renderForm();
+      if (!siteDirty) {
+        $("excluded").value = cfg.excluded;
+        $("included").value = cfg.included;
+      }
+    } else if (area === "local") {
+      for (const [k, v] of Object.entries(changes)) local[k] = v.newValue;
+      rates = local.rates || null;
+      renderRates();
+      renderForm();
+    }
   });
 }
-main();
+main().catch(UI.startupError);

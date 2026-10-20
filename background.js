@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Harry Rama. MIT License (see LICENSE).
 // Fetches and caches exchange rates (base USD). Opens settings on icon click.
+importScripts('diagnostics.js');
 
 const SOURCES = [
   {
@@ -47,15 +48,20 @@ async function fetchRates() {
         signal: AbortSignal.timeout(10000), credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-cache'
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const rates = cleanRates(src.parse(await res.json()));
+      const data = await res.json();
+      const rates = cleanRates(src.parse(data));
       if (Object.keys(rates).length < 20) throw new Error('Too few currencies');
-      const updated = Date.now();
-      await chrome.storage.local.set({ rates, ratesUpdated: updated, ratesSource: src.name, ratesBundled: false });
+      const fetched = Date.now();
+      const providerTime = typeof data.time_last_update_unix === 'number' ? data.time_last_update_unix * 1000 : Date.parse(data.date || '');
+      const updated = Number.isFinite(providerTime) && providerTime > 0 && providerTime <= fetched + 86400000 ? providerTime : fetched;
+      await chrome.storage.local.set({ rates, ratesUpdated: updated, ratesFetched: fetched, ratesSource: src.name, ratesBundled: false, ratesError: null });
       return { ok: true, count: Object.keys(rates).length, updated, source: src.name };
     } catch (e) {
       lastError = e;
     }
   }
+  await chrome.storage.local.set({ ratesError: 'Live rates could not be fetched. Existing or built-in rates are still available.' }).catch(() => {});
+  await DX.append('rates_fetch_failed');
   throw lastError || new Error('No rate source worked');
 }
 
@@ -67,6 +73,7 @@ async function seedFallbackIfEmpty() {
     if (rates && Object.keys(rates).length) return;
     const res = await fetch(chrome.runtime.getURL('fallback-rates.json'));
     const doc = await res.json();
+    if ((await chrome.storage.local.get('rates')).rates) return;
     await chrome.storage.local.set({
       rates: cleanRates(doc.rates),
       ratesUpdated: Date.parse(doc.date) || Date.now(),
@@ -120,6 +127,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Only this extension's own pages and content scripts may talk to the worker.
   if (!msg || typeof msg !== 'object' || sender.id !== chrome.runtime.id) return;
 
+  if (msg.type === 'diagnostic-event') { DX.append(msg.code); return; }
+
   // Content script reports its state so the toolbar icon can show it for that tab.
   if (msg.type === 'badge' && sender.tab) {
     const text = typeof msg.text === 'string' ? msg.text.slice(0, 3) : '';
@@ -138,7 +147,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'refresh-rates') {
     const fromOwnPage = !!(sender.url && sender.url.startsWith(chrome.runtime.getURL('')));
-    refreshRates(fromOwnPage && !sender.tab)
+    refreshRates(fromOwnPage)
       .then(sendResponse)
       .catch((e) => sendResponse({ ok: false, error: String((e && e.message) || e) }));
     return true; // async response

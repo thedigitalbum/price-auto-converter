@@ -3,17 +3,20 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require('playwright');
+const {browserOptions,verifyBrowser}=require('./browser.cjs');
 const root = process.env.SOURCE_DIR || path.join(__dirname, '..');
 test('Actual unpacked extension: worker, content scripts, settings, and latest-price restore', { timeout: 45000 }, async t => {
   const testDir = path.join(__dirname, '..', 'test-results');
   fs.mkdirSync(testDir, { recursive: true });
   const profile = fs.mkdtempSync(path.join(testDir, 'extension-profile-'));
   const context = await chromium.launchPersistentContext(profile, {
+    ...browserOptions(),
     channel: 'chromium', headless: true, locale: 'en-US', ignoreDefaultArgs: ['--disable-extensions'],
     timeout: 15000,
-    args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`, '--host-resolver-rules=MAP * ~NOTFOUND']
+    args: [...(browserOptions().args||[]),`--disable-extensions-except=${root}`, `--load-extension=${root}`, '--host-resolver-rules=MAP * ~NOTFOUND']
   });
   t.after(() => context.close());
+  await verifyBrowser(context);
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker', { timeout: 10000 });
   // Wait for install's bundled-rate seeding before choosing deterministic test rates.
   await worker.evaluate(async () => {
@@ -24,7 +27,7 @@ test('Actual unpacked extension: worker, content scripts, settings, and latest-p
     await chrome.storage.local.set({ rates: { USD: 1, PHP: 56, CAD: 1.4 }, ratesBundled: false });
     await chrome.storage.sync.set({ enabled: true, target: 'PHP', fxBuffer: 0 });
   });
-  assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), '1.0.8');
+  assert.equal(await worker.evaluate(() => chrome.runtime.getManifest().version), '1.1.0');
   const page = await context.newPage();
   await page.route('https://shop.example/**', route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><meta charset="utf-8"><meta name="currency" content="USD"><p id="price">USD 100</p><div class="a-price" id="az"><span class="a-offscreen">$19.99</span><span aria-hidden="true">$19.99</span></div>' }));
   await page.goto('https://shop.example/');

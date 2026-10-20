@@ -1,118 +1,232 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Price Auto Converter — Settings</title>
-<style>
-  :root{--bg:#f6f7f9;--card:#fff;--text:#111827;--muted:#5b6472;--line:#e3e6eb;--accent:#2563eb;--ok:#15803d}
-  @media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a21;--text:#f3f4f6;--muted:#9aa3b2;--line:#2a2f3a;--accent:#60a5fa;--ok:#4ade80}}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  main{max-width:640px;margin:0 auto;padding:32px 20px 64px}
-  h1{font-size:24px;margin:0}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-  #saved{color:var(--ok);font-size:14px;opacity:0;transition:opacity .2s}
-  #saved.on{opacity:1}
-  #saved.bad{color:#b91c1c;max-width:60%;text-align:right}
-  @media (prefers-color-scheme:dark){#saved.bad{color:#f87171}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}
-  .row{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
-  .row:last-child{margin-bottom:0}
-  label,.lbl{font-weight:600}
-  .hint{color:var(--muted);font-size:14px;margin:0}
-  select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
-  textarea{min-height:90px;resize:vertical}
-  select:focus,textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  .check{display:flex;gap:10px;align-items:flex-start}
-  .check input{margin-top:5px;width:18px;height:18px;flex:none}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .preview{font-size:18px;font-weight:600;padding:12px 14px;border-radius:8px;background:var(--bg);border:1px dashed var(--line)}
-  button{font:inherit;font-weight:600;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit;cursor:pointer}
-  button:hover{border-color:var(--accent)}
-  .status{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-  footer{color:var(--muted);font-size:13px;margin-top:24px}
-  footer a{color:var(--accent)}
-</style>
-</head>
-<body>
-<main>
-  <header>
-    <h1>Price Auto Converter</h1>
-    <span id="saved" role="status">Saved ✓</span>
-  </header>
-
-  <section class="card">
-    <div class="row">
-      <div class="check">
-        <input type="checkbox" id="enabled">
-        <label for="enabled">Convert prices on web pages</label>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Settings · Price Auto Converter</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brandmark" aria-hidden="true">≈</span>
+          <div>
+            <div class="brandname">Price Auto Converter</div>
+            <span class="version" id="ver"></span>
+          </div>
+        </div>
+        <p id="message" class="toast" role="status">
+          Preferences save automatically
+        </p>
+      </header>
+      <div class="page-head">
+        <p class="eyebrow">Make yourself at home</p>
+        <h1 style="margin-top: 10px">
+          A familiar price.<br />A calmer way to browse.
+        </h1>
+        <p>
+          Choose your currency and how much detail you want. Every converted
+          amount is an estimate; the shop’s original price is always available
+          on hover.
+        </p>
       </div>
-    </div>
-    <div class="row">
-      <label for="target">Convert all prices to</label>
-      <select id="target"></select>
-      <div class="preview" id="preview">…</div>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="row">
-      <label for="indicator">How converted prices are marked</label>
-      <select id="indicator">
-        <option value="standard">Standard — ≈ before the price, faint tint, dotted underline</option>
-        <option value="minimal">Minimal — dotted underline only</option>
-        <option value="tilde">Symbol only — ≈ before the price</option>
-      </select>
-      <p class="hint">Anyone using this browser sees these marks, so people know a price was converted and isn’t the shop’s own. Hovering a converted price shows the original.</p>
-    </div>
-    <div class="row">
-      <div class="check">
-        <input type="checkbox" id="whole">
-        <label for="whole">Hide cents on amounts of 10 or more<br><span class="hint">₱1,119 instead of ₱1,119.44</span></label>
+      <div class="settings-layout">
+        <nav class="side-nav" aria-label="Settings sections">
+          <a href="#conversion">Conversion</a
+          ><a href="#appearance">Appearance</a><a href="#sites">Website rules</a
+          ><a href="#rates">Exchange rates</a
+          ><a href="#support">Help &amp; privacy</a>
+        </nav>
+        <div class="settings-main">
+          <section class="card" id="conversion">
+            <div class="section-head">
+              <span class="number">01</span>
+              <h2>Conversion</h2>
+            </div>
+            <div class="row">
+              <div>
+                <label for="enabled"
+                  ><strong>Convert supported prices</strong></label
+                >
+                <p class="hint">Turn off to pause conversion everywhere.</p>
+              </div>
+              <input
+                type="checkbox"
+                class="switch"
+                role="switch"
+                id="enabled"
+              />
+            </div>
+            <hr class="divider" />
+            <div class="field">
+              <label for="target">Your currency</label
+              ><select id="target"></select>
+              <p class="hint">
+                Already in this currency? The price stays as it is.
+              </p>
+            </div>
+            <div class="preview" id="preview" aria-live="polite">
+              Loading preview…
+            </div>
+            <hr class="divider" />
+            <div class="field">
+              <label for="fxBuffer">Card fee buffer</label
+              ><select id="fxBuffer"></select>
+              <p class="hint">
+                Add up to 5% to account for card or FX fees. This changes the
+                estimate, not the shop’s price or your bank’s rate.
+              </p>
+            </div>
+            <div class="two-col" style="margin-top: 22px">
+              <div class="field">
+                <label for="dollarMode">When a price uses $</label
+                ><select id="dollarMode"></select>
+              </div>
+              <div class="field">
+                <label for="yenMode">When a price uses ¥</label
+                ><select id="yenMode">
+                  <option value="auto">Auto-detect</option>
+                  <option>JPY</option>
+                  <option>CNY</option>
+                </select>
+              </div>
+            </div>
+            <p class="hint" style="margin-top: 10px">
+              Auto reads the shop’s currency data, country and language. Without
+              enough evidence, $ falls back to USD and ¥ to JPY. You can correct
+              an individual website from the popup.
+            </p>
+          </section>
+          <section class="card" id="appearance">
+            <div class="section-head">
+              <span class="number">02</span>
+              <h2>Appearance</h2>
+            </div>
+            <div class="field">
+              <label for="indicator">Mark converted prices</label
+              ><select id="indicator">
+                <option value="standard">
+                  Standard — ≈, subtle tint and dotted underline
+                </option>
+                <option value="minimal">Quiet — dotted underline</option>
+                <option value="tilde">Simple — ≈ only</option>
+              </select>
+              <p class="hint">
+                These cues distinguish estimates from the shop’s own prices.
+              </p>
+            </div>
+            <div class="check" style="margin-top: 22px">
+              <input id="whole" type="checkbox" /><label for="whole"
+                ><strong>Round larger amounts</strong
+                ><span class="hint"
+                  >Hide cents when the converted amount is 10 or more.</span
+                ></label
+              >
+            </div>
+          </section>
+          <section class="card" id="sites">
+            <div class="section-head">
+              <span class="number">03</span>
+              <h2>Website rules</h2>
+            </div>
+            <form id="siteForm">
+              <div class="field">
+                <label for="excluded">Pause on these websites</label
+                ><textarea
+                  id="excluded"
+                  spellcheck="false"
+                  placeholder="example.com&#10;another-shop.com"
+                ></textarea>
+                <p class="hint">
+                  One hostname per line. Each rule includes its subdomains.
+                </p>
+              </div>
+              <details style="margin-top: 16px">
+                <summary>Exceptions to paused websites</summary>
+                <div class="details-body field">
+                  <label for="included"
+                    >Allow these more-specific hostnames</label
+                  ><textarea
+                    id="included"
+                    spellcheck="false"
+                    placeholder="shop.example.com"
+                  ></textarea>
+                  <p class="hint">
+                    An exception keeps a subdomain active without changing its
+                    siblings. The popup also manages these exceptions for you.
+                  </p>
+                </div>
+              </details>
+              <button type="submit" style="margin-top: 16px">
+                Save website rules
+              </button>
+            </form>
+          </section>
+          <section class="card" id="rates">
+            <div class="section-head">
+              <span class="number">04</span>
+              <h2>Exchange rates</h2>
+            </div>
+            <p id="ratesTitle" style="color: var(--cyan)">Checking rates…</p>
+            <p id="ratesInfo" class="hint" style="margin-top: 7px"></p>
+            <button id="refresh" style="margin-top: 18px">Refresh rates</button>
+            <p class="hint" style="margin-top: 16px">
+              Rates refresh every six hours. Built-in estimates are available
+              offline. Provider rates may differ from the rate your bank uses.
+            </p>
+            <p class="hint" style="margin-top: 8px">
+              Sources:
+              <a
+                href="https://www.exchangerate-api.com"
+                target="_blank"
+                rel="noreferrer"
+                >ExchangeRate-API</a
+              >
+              and
+              <a
+                href="https://github.com/fawazahmed0/exchange-api"
+                target="_blank"
+                rel="noreferrer"
+                >currency-api</a
+              >.
+            </p>
+          </section>
+          <section class="card" id="support">
+            <div class="section-head">
+              <span class="number">05</span>
+              <h2>A little help, when you need it</h2>
+            </div>
+            <p class="hint">
+              Wrong currency, a missed price or something unexpected? Prepare a
+              report you can review before sharing. No report is sent
+              automatically.
+            </p>
+            <div class="actions" style="margin-top: 18px">
+              <button id="report" class="primary">Prepare a bug report</button
+              ><a href="privacy.html">Privacy details</a>
+            </div>
+            <p class="hint" style="margin-top: 18px">
+              Some layouts, images, embedded frames and numeral systems are
+              unsupported. Use the site switch if conversion interferes with a
+              shop.
+            </p>
+          </section>
+        </div>
       </div>
-    </div>
-    <div class="row">
-      <label for="fxBuffer">Card fee buffer</label>
-      <select id="fxBuffer"></select>
-      <p class="hint">Adds a percentage on top of the exchange rate to cover card or FX fees. Converted prices include it.</p>
-    </div>
-    <div class="row">
-      <div class="lbl">Ambiguous symbols</div>
-      <p class="hint">Auto reads the site (its address, language and product data), so $ on a .com.au shop means AUD. It falls back to USD for $ and JPY for ¥.</p>
-      <div class="two">
-        <div><label for="dollarMode">$ means</label>
-          <select id="dollarMode">
-            <option value="auto">Auto (from the site)</option>
-            <option>USD</option><option>CAD</option><option>AUD</option><option>NZD</option>
-            <option>SGD</option><option>HKD</option><option>MXN</option>
-          </select></div>
-        <div><label for="yenMode">¥ means</label>
-          <select id="yenMode"><option value="auto">Auto (from the site)</option><option>JPY</option><option>CNY</option></select></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="row">
-      <label for="excluded">Don’t convert on these sites</label>
-      <textarea id="excluded" placeholder="example.com&#10;mybank.com" spellcheck="false"></textarea>
-      <p class="hint">One site per line. Subdomains are included. You can also switch a site off from the toolbar icon.</p>
-    </div>
-
-  </section>
-
-  <section class="card">
-    <div class="status">
-      <div><div class="lbl">Exchange rates</div><p class="hint" id="ratesInfo">Loading…</p></div>
-      <button id="refresh">Refresh now</button>
-    </div>
-  </section>
-
-  <footer>Rates refresh automatically every 6 hours. Source: <a href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">ExchangeRate-API</a>. Converted amounts are approximate.<br>© 2026 Harry Rama · MIT License · <span id="ver"></span>
-  <br>Free forever. If it saves you time, you can <a href="https://ko-fi.com/harryrama" target="_blank" rel="noopener noreferrer">support it on Ko-fi</a>.</footer>
-</main>
-<script src="lib.js"></script>
-<script src="options.js"></script>
-</body>
+      <footer class="settings-footer">
+        <span>© 2026 Harry Rama</span
+        ><a
+          href="https://ko-fi.com/harryrama"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Support this free extension</a
+        ><span>Neo Tokyo · quiet by design</span>
+      </footer>
+    </main>
+    <script src="lib.js"></script>
+    <script src="diagnostics.js"></script>
+    <script src="ui.js"></script>
+    <script src="options.js"></script>
+  </body>
 </html>

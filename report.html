@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Report a problem · Price Auto Converter</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body>
+    <main class="report-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brandmark" aria-hidden="true">≈</span>
+          <div>
+            <div class="brandname">Price Auto Converter</div>
+            <span class="version" id="ver"></span>
+          </div>
+        </div>
+        <a href="options.html">Settings</a>
+      </header>
+      <div class="page-head">
+        <p class="eyebrow">Help make it better</p>
+        <h1 style="margin-top: 10px">
+          A useful report.<br />Only what you choose to share.
+        </h1>
+        <p>
+          Review the details below, then copy or download them. Nothing is
+          uploaded automatically.
+        </p>
+      </div>
+      <div class="stack">
+        <section class="card">
+          <h2>What to include</h2>
+          <p class="hint" style="margin-top: 8px">
+            Version, conversion settings, rate freshness, conversion factors,
+            counts, safe element shapes and recent extension error codes are
+            included. Browsing history, full URLs, page prose, forms and cookies
+            are excluded.
+          </p>
+          <div class="check" style="margin-top: 20px">
+            <input type="checkbox" id="includeSite" /><label for="includeSite"
+              ><strong>Include this website’s hostname</strong
+              ><span class="hint"
+                >For example, shop.example.com. No path, search query or page
+                title.</span
+              ></label
+            >
+          </div>
+          <div class="check">
+            <input type="checkbox" id="includeExamples" /><label
+              for="includeExamples"
+              ><strong>Include up to five original price examples</strong
+              ><span class="hint"
+                >Optional. Prices can be sensitive on personal or account pages.
+                Review them below.</span
+              ></label
+            >
+          </div>
+          <p class="hint" id="pageNote" style="margin-top: 16px">
+            Checking page context…
+          </p>
+        </section>
+        <section class="card">
+          <div class="row">
+            <h2>Report preview</h2>
+            <button class="link-button" id="clearEvents">
+              Clear error history
+            </button>
+          </div>
+          <label
+            class="hint"
+            for="preview"
+            style="display: block; margin: 12px 0 8px"
+            >Exactly what Copy and Download will contain</label
+          ><textarea
+            id="preview"
+            class="report-preview"
+            readonly
+            spellcheck="false"
+            aria-label="Report JSON preview"
+          >
+Preparing report…</textarea
+          >
+          <div class="actions">
+            <button id="copy" class="primary" disabled>Copy report</button
+            ><button id="download" disabled>Download JSON</button>
+          </div>
+          <p
+            id="message"
+            class="toast"
+            role="status"
+            style="margin-top: 12px"
+          ></p>
+        </section>
+        <section class="card">
+          <h2>Send it to the developer</h2>
+          <p class="hint" style="margin-top: 9px">
+            Copy the report and open a GitHub issue. Describe what happened and
+            paste the JSON into the diagnostics field or issue description.
+            GitHub needs an account; copying or downloading does not.
+          </p>
+          <p class="notice warn" style="margin-top: 16px">
+            GitHub issues are public. Check the preview before sharing, and
+            leave personal details out.
+          </p>
+          <button id="github" style="margin-top: 16px" disabled>
+            Copy report &amp; open GitHub
+          </button>
+          <p class="hint" style="margin-top: 14px">
+            You can also save the JSON and share it through a support
+            conversation you already have with the developer. No account is
+            needed to export it.
+          </p>
+        </section>
+      </div>
+      <p class="hint" style="margin-top: 24px">
+        <a href="privacy.html">Privacy details</a> · Reports are not stored or
+        synced by this extension.
+      </p>
+    </main>
+    <script src="lib.js"></script>
+    <script src="diagnostics.js"></script>
+    <script src="ui.js"></script>
+    <script src="report.js"></script>
+  </body>
+</html>
