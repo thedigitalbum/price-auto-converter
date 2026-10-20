@@ -62,7 +62,10 @@ test(
     const base = "chrome-extension://" + new URL(worker.url()).host + "/";
     await worker.evaluate(async () => {
       for (let i = 0; i < 100; i++) {
-        if ((await chrome.storage.local.get("rates")).rates) break;
+        if (
+          globalThis.chrome?.storage?.local &&
+          (await chrome.storage.local.get("rates")).rates
+        ) break;
         await new Promise((r) => setTimeout(r, 30));
       }
       await chrome.storage.local.set({
