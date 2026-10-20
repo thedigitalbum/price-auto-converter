@@ -1,4 +1,4 @@
-> **1.1.1 reporting update in development:** private anonymous submission replaces the earlier GitHub reporting flow. See docs/BUG_REPORTS.md and collector/SETUP.md. Production packaging is blocked until the receiver is configured and tested. Earlier 1.1.0 release instructions below apply only to that release.
+> **1.1.1 reporting update:** private anonymous submission replaces GitHub reporting. On 20 October 2026 the deployed receiver passed anonymous receipt/deduplication/Sheet checks, an actual Chrome extension Send test and Gmail digest attachment verification. See docs/BUG_REPORTS.md. Earlier 1.1.0 release instructions below apply only to that release; Chrome Web Store submission remains pending.
 
 # Chrome Web Store submission — 1.1.0
 

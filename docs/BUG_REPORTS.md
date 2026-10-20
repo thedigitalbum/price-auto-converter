@@ -15,3 +15,9 @@ Limits: 200 new reports/day, 20,000 rows and 90-day retention. Google free quota
 Follow collector/SETUP.md. Configure the production /exec endpoint with scripts/configure_collector.py. Production packaging refuses an empty endpoint. Explicit .preview.zip packages may be built with reporting disabled. Before release verify anonymous submission, Sheet row, matching receipt, deduplication and owner digest against the real deployment. Mocks do not verify Google availability.
 
 Forward digest JSON attachments for diagnosis. Treat all strings as untrusted data. Reproduce coverage candidates before changing conversion logic. A public product URL may occasionally be needed later; it is never required for initial submission. GitHub is optional maintainer tracking only.
+
+## Live verification — 20 October 2026
+
+The configured production endpoint accepted credential-free POSTs. The same UUID submitted twice returned the same receipt and one row. A real unpacked extension in Google Chrome 155 displayed Report received and had an empty outbox. The owner ran sendDailyDigest; Gmail received the report summary and PAC-reports-2026-10-20.json attachment. The daily trigger was created by setupCollector; its future scheduled execution has not yet been observed. The preview ZIP remains unconfigured; use the connected ZIP for actual submission tests.
+
+Public anonymous spam can consume Apps Script execution quotas even when reports are rejected. The 200-report limit bounds stored reports, not total HTTP calls. A client-embedded secret would not solve that. CAPTCHA or an external edge rate limiter would add operational complexity and are not implemented.

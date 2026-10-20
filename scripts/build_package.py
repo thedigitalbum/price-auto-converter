@@ -15,7 +15,7 @@ manifest=json.loads((root/'manifest.json').read_text(encoding='utf8'))
 package=json.loads((root/'package.json').read_text(encoding='utf8'))
 assert manifest['version']==package['version'],'Manifest/package version mismatch'
 config=(root/'report-config.js').read_text(encoding='utf8')
-match=re.search(r'endpoint\s*:\s*[\'"]([^\'"]*)',config)
+match=re.search(r'[\'"]?endpoint[\'"]?\s*:\s*[\'"]([^\'"]*)',config)
 endpoint=match.group(1) if match else ''
 configured=bool(re.fullmatch(r'https://script\.google\.com/macros/s/[A-Za-z0-9_-]{20,200}/exec',endpoint))
 output=Path(args.output).resolve()

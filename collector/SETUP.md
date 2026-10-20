@@ -1,4 +1,4 @@
-# One-time developer setup — reporting is not live yet
+# One-time developer setup (completed for current deployment)
 
 1. Open script.google.com in the publisher Google account. Create a project. Paste the contents of ReportCore.gs followed by Code.gs into Code.gs. In Project Settings enable the manifest file and replace appsscript.json with the supplied manifest. Save.
 2. Select setupCollector and Run. Review and authorize Google access yourself: spreadsheet access, send-only email, and managing this project's daily trigger. This creates the private inbox and one daily digest. Do not share the Sheet publicly. The execution log contains its private URL. Keep email copies no longer than 90 days.
@@ -7,3 +7,5 @@
 The assistant then configures the endpoint, narrows extension permissions, verifies a credential-free test submission/receipt/row/deduplication, and rebuilds the installable ZIP. Run sendDailyDigest once to verify delivery to thedigitalbum@gmail.com; it sends real email. The free daily Google quotas still apply.
 
 The endpoint URL is public, not a password. Never embed an OAuth token, API secret or mailbox credentials in the extension. A redeployment must preserve the URL or be followed by a new extension package. Tests use a mock transport and cannot prove your live deployment is working.
+
+Current deployment was configured and live-tested on 20 October 2026. These steps are retained for recovery or a future deployment; do not create a duplicate project for normal use.
