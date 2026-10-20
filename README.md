@@ -1,3 +1,5 @@
+> **1.1.2:** fixes Amazon conversion feedback loops and unnecessary metadata restarts. Includes the private reporting and popup improvements developed in 1.1.1. Chrome Web Store submission remains pending.
+
 > **1.1.1 reporting update:** private anonymous submission replaces GitHub reporting. On 20 October 2026 the deployed receiver passed anonymous receipt/deduplication/Sheet checks, an actual Chrome extension Send test and Gmail digest attachment verification. See docs/BUG_REPORTS.md. Earlier 1.1.0 release instructions below apply only to that release; Chrome Web Store submission remains pending.
 
 # Price Auto Converter

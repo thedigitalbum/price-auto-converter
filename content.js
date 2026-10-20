@@ -17,6 +17,7 @@
   let observer = null;
   let flushTimer = null;
   let restartTimer = null;
+  let currencyTimer = null;
   const BRAND = "Price Auto Converter";
 
   // Text of `el` if it is at most `max` characters long, otherwise null. Stops reading as soon as
@@ -410,6 +411,12 @@
   // Currencies written on the page itself; the clear winner is almost always the shop's currency.
   function voteCurrency() {
     const votes = { ...ctx.mentions }; // mentions already converted still count
+    // Keep genuine source evidence from Amazon's originals, never the PHP
+    // text written into its accessible label. Ambiguous "$" adds no vote.
+    for (const saved of azSaved.values()) {
+      if (saved.sourceVote)
+        votes[saved.sourceVote] = (votes[saved.sourceVote] || 0) + 1;
+    }
     const vctx = { ...ctx, target: "" };
     let seen = 0;
     for (const root of textRoots()) {
@@ -420,6 +427,10 @@
           continue;
         const p = n.parentElement;
         if (!p || p.closest(SKIP)) continue;
+        // Amazon's accessible label is rewritten too. It must not vote for
+        // the target currency and cause a restore/restart feedback loop.
+        const amazon = p.closest(".a-price");
+        if (amazon && azSaved.has(amazon)) continue;
         seen++;
         for (const h of PC.find(t, vctx)) {
           if (!h.amb) votes[h.from] = (votes[h.from] || 0) + 1;
@@ -855,6 +866,8 @@
     flushTimer = null;
     clearTimeout(initTimer);
     clearTimeout(reapplyTimer);
+    clearTimeout(currencyTimer);
+    currencyTimer = null;
     pending.clear();
     revertAll();
     ctx = null;
@@ -1389,6 +1402,7 @@
       off,
       offText: off.textContent,
       from: hits[0].from,
+      sourceVote: hits[0].amb ? null : hits[0].from,
       vis,
       visNodes: Array.from(vis.childNodes),
       shown,
@@ -1429,9 +1443,20 @@
         );
       })
     ) {
-      clearTimeout(restartTimer);
-      restartTimer = setTimeout(start, 200);
-      return;
+      // Product metadata also changes for ratings, stock and tracking. Check
+      // the effective currency before restoring any displayed prices.
+      if (!currencyTimer)
+        currencyTimer = setTimeout(
+          () =>
+            guardConversion(() => {
+              currencyTimer = null;
+              if (!ctx || switching) return;
+              const detected = detectPageCurrency();
+              if (detected.code && detected.code !== ctx.bare) start();
+              else if (detected.code) ctx.bareSource = detected.source;
+            }),
+          200,
+        );
     }
     for (const m of list) {
       if (m.type === "characterData") pending.add(m.target);
