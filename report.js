@@ -40,26 +40,18 @@ async function build() {
     base.id = reportId;
     base.page.evidence = page?.evidence || [];
     report = RC.prepare(base);
-    $("summary").textContent = report.summary;
+    $("summary").textContent = report.summary.replace(
+      " No automatic failure was confirmed.",
+      "",
+    );
     $("context").textContent =
-      `${report.page.converted} converted price fragments · ${report.settings.target}. ` +
-      (report.page.missedPrices
-        ? "These are possible missed elements, not confirmed pricing errors. "
-        : "") +
-      "The technical details have been prepared for investigation.";
+      `${report.page.converted} converted · ${report.settings.target}`;
     $("preview").value = JSON.stringify(report, null, 2);
     $("download").disabled = false;
     if (!submitted && !sending) $("send").disabled = !ready?.configured;
-    if (!ready?.configured)
-      UI.toast(
-        "The developer is finishing report delivery setup. Nothing has been sent.",
-        true,
-      );
+    if (!ready?.configured) UI.toast("Report delivery is not connected.", true);
   } catch {
-    UI.toast(
-      "Could not prepare diagnostics. Reopen this page to try again.",
-      true,
-    );
+    UI.toast("Could not prepare report. Reopen to retry.", true);
     $("send").disabled = true;
     DX.record("report_build_failed");
   }
@@ -67,26 +59,22 @@ async function build() {
 function result(r) {
   if (r?.ok && r.status === "sent") {
     submitted = true;
-    $("summary").textContent = "Report received. Thank you!";
-    UI.toast("Reference: " + r.receipt + ". You can close this tab.");
+    $("summary").textContent = "Report received";
+    UI.toast("Reference: " + r.receipt);
     $("send").textContent = "Sent";
     $("send").disabled = true;
   } else if (r?.ok && r.status === "queued") {
     submitted = true;
     $("summary").textContent = "Saved on this device.";
-    UI.toast(
-      "We’ll retry automatically for up to 7 days. Keep the extension installed; no further action is needed.",
-    );
+    UI.toast("Retrying automatically for up to 7 days.");
     $("send").textContent = "Waiting to send";
     $("send").disabled = true;
   } else {
     const messages = {
       not_configured: "The developer has not connected report delivery yet.",
-      queue_full:
-        "Five reports are already waiting on this device. Please try later.",
-      too_soon: "A report was just sent. Please wait a moment.",
-      invalid_report:
-        "This report could not be accepted. Update the extension and try again.",
+      queue_full: "Report queue full. Try later.",
+      too_soon: "Please wait before sending another report.",
+      invalid_report: "Report rejected. Update the extension and retry.",
       storage_unavailable: "Could not save the report on this device.",
     };
     UI.toast(
@@ -105,10 +93,7 @@ $("send").onclick = async () => {
   try {
     result(await chrome.runtime.sendMessage({ type: "submit-report", report }));
   } catch {
-    UI.toast(
-      "Could not contact the extension. Reopen this page to try again.",
-      true,
-    );
+    UI.toast("Extension unavailable. Reopen to retry.", true);
     $("send").disabled = false;
   } finally {
     sending = false;

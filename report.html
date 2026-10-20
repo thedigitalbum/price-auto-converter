@@ -19,31 +19,25 @@
         <a href="options.html">Settings</a>
       </header>
       <div class="page-head">
-        <p class="eyebrow">Help make it better</p>
-        <h1 style="margin-top: 10px">Report a problem.</h1>
-        <p>No account, typing or copy-and-paste needed.</p>
+        <h1>Report a problem</h1>
       </div>
       <section class="card stack">
         <h2 id="summary">Checking this page…</h2>
         <p class="hint" id="context"></p>
         <p class="notice" id="disclosure">
-          Send shares the website hostname, conversion settings and redacted
-          price-layout diagnostics with Harry Rama, stored privately using
-          Google. Exact price amounts, full URLs, page text, cookies and form
-          values are excluded.
+          Sends the site name, settings and redacted diagnostics to our private
+          Google inbox.
         </p>
         <button id="send" class="primary" disabled>Send report</button>
         <p id="message" class="toast" role="status" aria-live="polite"></p>
         <p class="hint">
-          <a href="privacy.html">Privacy details</a> · Nothing is sent until you
-          press Send.
+          <a href="privacy.html">Privacy</a>
         </p>
       </section>
       <details style="margin-top: 22px">
         <summary>Technical details</summary>
         <div class="details-body stack">
-          <label for="preview" class="hint"
-            >Automatically prepared diagnostics</label
+          <label for="preview" class="hint">Diagnostics</label
           ><textarea
             id="preview"
             class="report-preview"
@@ -53,8 +47,8 @@
 Preparing report…</textarea
           >
           <div class="actions">
-            <button id="download" disabled>Save diagnostic copy</button
-            ><button id="clearEvents">Clear local error history</button>
+            <button id="download" disabled>Download JSON</button
+            ><button id="clearEvents">Clear error history</button>
           </div>
         </div>
       </details>
