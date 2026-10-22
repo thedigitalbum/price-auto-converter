@@ -1387,17 +1387,21 @@
       (sourceChanged ? off.textContent : vis.textContent).trim() ||
       (!ownVisible ? vis.textContent.trim() : "");
     if (!t) return;
+    // Deal cards include an accessibility label before the amount.
+    const prefix = t.match(/^(?:Deal Price|List Price|Typical)\s*:?\s+(?=\S)/i)?.[0] || "";
+    const price = t.slice(prefix.length);
     if (saved) {
       if (!sourceChanged)
         off.textContent = saved.offText.trim() ? t : saved.offText;
-      if (ownVisible) vis.replaceChildren(document.createTextNode(t));
+      if (ownVisible) vis.replaceChildren(document.createTextNode(price));
       azSaved.delete(el);
       el.removeAttribute("data-pc-az");
     }
-    const hits = PC.find(t, ctx);
-    if (hits.length !== 1 || hits[0].start !== 0 || hits[0].end !== t.length)
+    const hits = PC.find(price, ctx);
+    if (hits.length !== 1 || hits[0].start !== 0 || hits[0].end !== price.length)
       return;
-    const shown = PC.render(hits[0], ctx);
+    const rendered = PC.render(hits[0], ctx);
+    const shown = prefix + rendered;
     const record = {
       off,
       offText: off.textContent,
@@ -1418,7 +1422,7 @@
     );
     sp.dataset.orig = hits[0].text;
     sp.dataset.from = hits[0].from;
-    sp.textContent = shown;
+    sp.textContent = rendered;
     record.marker = sp;
     vis.replaceChildren(sp);
   }

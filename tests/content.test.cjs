@@ -120,6 +120,25 @@ test('Amazon source updates re-convert and restore latest value', async t => {
   await text(p, '#az .a-offscreen', '$29.99');
   await text(p, '#az [aria-hidden]', '$29.99');
 });
+test('Amazon deals labels convert, stay stable, update and restore', async t => {
+  const labels = ['Deal Price:', 'List Price', 'Typical:'];
+  const p = await fixture(t, labels.map((label, i) => `<span class="a-price" id="deal${i}"><span class="a-offscreen">${label} $30.99</span><span aria-hidden="true"><span class="a-price-symbol">$</span><span class="a-price-whole">30<span class="a-price-decimal">.</span></span><span class="a-price-fraction">99</span></span></span>`).join(''), {url:'https://www.amazon.com/events/deals/'});
+  for (let i=0;i<labels.length;i++) {
+    await text(p, `#deal${i} [aria-hidden]`, '≈ ₱1,735.44');
+    await text(p, `#deal${i} .a-offscreen`, labels[i]+' ≈ ₱1,735.44');
+  }
+  await p.evaluate(()=>window.savedDealMarker=document.querySelector('#deal0 [data-pc]'));
+  await p.waitForTimeout(4500);
+  assert.equal(await p.evaluate(()=>window.savedDealMarker===document.querySelector('#deal0 [data-pc]')),true);
+  await p.evaluate(()=>document.querySelector('#deal0 .a-offscreen').textContent='Deal Price: $40.99');
+  await text(p, '#deal0 [aria-hidden]', '≈ ₱2,295.44');
+  await p.evaluate(()=>setSettings({enabled:false}));
+  await text(p, '#deal0 .a-offscreen', 'Deal Price: $40.99');
+  await text(p, '#deal0 [aria-hidden]', '$40.99');
+  await text(p, '#deal1 .a-offscreen', 'List Price $30.99');
+  assert.equal(await p.locator('#deal1 .a-price-fraction').count(),1);
+});
+
 test('Ordinary dynamic updates and long paragraphs convert', async t => {
   const p = await fixture(t, '<p id="price">USD 100</p><p id="long">' + 'Ordinary text. '.repeat(400) + 'USD 100</p>');
   await text(p, '#price', '≈ ₱5,600.00');
