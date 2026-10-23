@@ -2,6 +2,9 @@
 
 ## 1.1.4 — Unreleased
 
+- Recognize Noon's custom dirham symbol in AED price elements, including order history.
+- Use the approved Midnight Tokyo icon at all extension sizes.
+
 - Add first-use currency confirmation with a searchable list and a suggestion based on Chrome's explicit language region.
 - Wait for confirmation before converting on fresh installs; preserve saved preferences and the historical PHP default for upgrades.
 - Keep setup inside the popup instead of opening Settings automatically after installation.

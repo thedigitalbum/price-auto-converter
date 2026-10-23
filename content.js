@@ -972,6 +972,17 @@
     if (!text || text.length > 100000 || !/\d/.test(text)) return false;
     const info = {};
     let hits = PC.find(text, ctx, info);
+    // Noon's UAE storefront draws its dirham sign with a private-use font glyph.
+    // Keep this mapping scoped to known AED prices; the glyph has no global meaning.
+    if (!hits.length && /(^|\.)noon\.com$/.test(location.hostname) &&
+        ctx.bare === "AED" && priceLike(node) && /^\s*\uE001\s*[\d,.]+\s*$/.test(text)) {
+      const normalized = text.replace("\uE001", "AED");
+      const parsed = PC.find(normalized, ctx);
+      if (parsed.length === 1) {
+        const h = parsed[0];
+        hits = [{ ...h, end: h.end - 2, text: text.slice(h.start, h.end - 2), label: h.text }];
+      }
+    }
     if (!hits.length) {
       if (ctx.bare) hits = bareHits(text, node);
       else if (PC.isBareNumber(text) && priceLike(node)) ctx.skipped.add(node); // price with unknown currency
