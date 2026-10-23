@@ -729,6 +729,7 @@
     stop();
     switching = false;
     const run = ++runId;
+    if (!settings.currencyConfirmed) return setState("setup", "Choose your currency in the extension popup");
     if (!settings.enabled) return setState("off", "turned off in settings");
     if (!rates)
       return setState(
@@ -971,6 +972,17 @@
     if (!text || text.length > 100000 || !/\d/.test(text)) return false;
     const info = {};
     let hits = PC.find(text, ctx, info);
+    // Noon's UAE storefront draws its dirham sign with a private-use font glyph.
+    // Keep this mapping scoped to known AED prices; the glyph has no global meaning.
+    if (!hits.length && /(^|\.)noon\.com$/.test(location.hostname) &&
+        ctx.bare === "AED" && priceLike(node) && /^\s*\uE001\s*[\d,.]+\s*$/.test(text)) {
+      const normalized = text.replace("\uE001", "AED");
+      const parsed = PC.find(normalized, ctx);
+      if (parsed.length === 1) {
+        const h = parsed[0];
+        hits = [{ ...h, end: h.end - 2, text: text.slice(h.start, h.end - 2), label: h.text }];
+      }
+    }
     if (!hits.length) {
       if (ctx.bare) hits = bareHits(text, node);
       else if (PC.isBareNumber(text) && priceLike(node)) ctx.skipped.add(node); // price with unknown currency
@@ -1387,17 +1399,21 @@
       (sourceChanged ? off.textContent : vis.textContent).trim() ||
       (!ownVisible ? vis.textContent.trim() : "");
     if (!t) return;
+    // Deal cards include an accessibility label before the amount.
+    const prefix = t.match(/^(?:Deal Price|List Price|Typical)\s*:?\s+(?=\S)/i)?.[0] || "";
+    const price = t.slice(prefix.length);
     if (saved) {
       if (!sourceChanged)
         off.textContent = saved.offText.trim() ? t : saved.offText;
-      if (ownVisible) vis.replaceChildren(document.createTextNode(t));
+      if (ownVisible) vis.replaceChildren(document.createTextNode(price));
       azSaved.delete(el);
       el.removeAttribute("data-pc-az");
     }
-    const hits = PC.find(t, ctx);
-    if (hits.length !== 1 || hits[0].start !== 0 || hits[0].end !== t.length)
+    const hits = PC.find(price, ctx);
+    if (hits.length !== 1 || hits[0].start !== 0 || hits[0].end !== price.length)
       return;
-    const shown = PC.render(hits[0], ctx);
+    const rendered = PC.render(hits[0], ctx);
+    const shown = prefix + rendered;
     const record = {
       off,
       offText: off.textContent,
@@ -1418,7 +1434,7 @@
     );
     sp.dataset.orig = hits[0].text;
     sp.dataset.from = hits[0].from;
-    sp.textContent = shown;
+    sp.textContent = rendered;
     record.marker = sp;
     vis.replaceChildren(sp);
   }
@@ -1665,6 +1681,8 @@
             ? changes[k].newValue
             : PC.DEFAULTS[k];
       }
+      if (changes.target && changes.target.newValue === undefined)
+        settings.currencyConfirmed = false;
       settings = PC.settings(settings);
     } else if (area === "local") {
       if (!changes.rates) return;
@@ -1681,7 +1699,7 @@
   async function init() {
     try {
       const [s, l] = await Promise.all([
-        chrome.storage.sync.get(PC.DEFAULTS),
+        chrome.storage.sync.get(null),
         chrome.storage.local.get(["rates", "ratesBundled"]),
       ]);
       settings = PC.settings(s);
