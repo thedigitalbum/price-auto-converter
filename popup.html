@@ -7,7 +7,21 @@
     <link rel="stylesheet" href="ui.css" />
   </head>
   <body>
-    <main class="popup">
+    <main class="popup" id="currencySetup" hidden>
+      <header class="topbar"><div class="brandname">Price Auto Converter</div></header>
+      <section class="card stack" aria-labelledby="setupHeading">
+        <h1 id="setupHeading">Your shopping currency</h1>
+        <p class="hint" id="setupHint"></p>
+        <label for="currencySearch">Find a currency</label>
+        <input id="currencySearch" type="search" placeholder="Search name or code" autocomplete="off" />
+        <label for="setupCurrency">Convert prices to</label>
+        <select id="setupCurrency" size="5"></select>
+        <p id="currencyResults" class="hint" role="status"></p>
+        <button id="startConverting" class="primary" disabled>Start converting</button>
+        <p id="setupError" class="bad" role="alert" hidden></p>
+      </section>
+    </main>
+    <main class="popup" id="conversionPanel" hidden>
       <header class="topbar">
         <div class="brand">
           <span class="brandmark" aria-hidden="true">≈</span>

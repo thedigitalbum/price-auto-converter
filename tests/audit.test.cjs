@@ -8,6 +8,20 @@ const src = fs.readFileSync(
   "utf8",
 );
 const PC = vm.runInNewContext(src + "\nPC", { Intl, TextEncoder });
+
+test('Currency suggestions require an explicit supported region', () => {
+  const codes = ['PHP','USD','CAD','EUR','JPY','GBP'];
+  for (const [languages, expected] of [
+    [['en-PH'],'PHP'], [['en-US'],'USD'], [['fr-CA'],'CAD'],
+    [['de-DE'],'EUR'], [['ja-JP'],'JPY'], [['en-GB'],'GBP'],
+    [['en'],''], [['fil'],''], [['en-001'],''], [['en-ZZ'],''],
+    [['not_a_locale','en-PH'],'PHP'], [['en','en-PH'],'PHP'],
+    [['en-AU','en-US'],''],
+  ]) assert.equal(PC.suggestedCurrency(languages,codes),expected);
+  assert.equal(PC.settings({}).currencyConfirmed,false);
+  assert.equal(PC.settings({target:'CAD',enabled:false}).currencyConfirmed,true);
+  assert.equal(PC.settings({target:'PHP',currencyConfirmed:false}).currencyConfirmed,false);
+});
 test("Feet in product dimensions are not Hungarian money", () => {
   const c = {
     rates: { USD: 1, PHP: 56, HUF: 350 },

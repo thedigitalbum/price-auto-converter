@@ -729,6 +729,7 @@
     stop();
     switching = false;
     const run = ++runId;
+    if (!settings.currencyConfirmed) return setState("setup", "Choose your currency in the extension popup");
     if (!settings.enabled) return setState("off", "turned off in settings");
     if (!rates)
       return setState(
@@ -1669,6 +1670,8 @@
             ? changes[k].newValue
             : PC.DEFAULTS[k];
       }
+      if (changes.target && changes.target.newValue === undefined)
+        settings.currencyConfirmed = false;
       settings = PC.settings(settings);
     } else if (area === "local") {
       if (!changes.rates) return;
@@ -1685,7 +1688,7 @@
   async function init() {
     try {
       const [s, l] = await Promise.all([
-        chrome.storage.sync.get(PC.DEFAULTS),
+        chrome.storage.sync.get(null),
         chrome.storage.local.get(["rates", "ratesBundled"]),
       ]);
       settings = PC.settings(s);

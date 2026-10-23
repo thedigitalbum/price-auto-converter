@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.4 — Unreleased
+
+- Add first-use currency confirmation with a searchable list and a suggestion based on Chrome's explicit language region.
+- Wait for confirmation before converting on fresh installs; preserve saved preferences and the historical PHP default for upgrades.
+- Keep setup inside the popup instead of opening Settings automatically after installation.
+- Include the Amazon deal-price fix from the v1.1.3 test build.
+
 ## 1.1.3 — Unreleased
 
 ### Fixed

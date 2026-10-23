@@ -75,12 +75,64 @@ async function renderRates() {
   $("ratesTitle").style.color = text.warn ? "var(--warn)" : "var(--cyan)";
   return l;
 }
+async function setupCurrency() {
+  $("currencySetup").hidden = false;
+  $("conversionPanel").hidden = true;
+  const local = await chrome.storage.local.get("rates");
+  const bundled = await fetch(chrome.runtime.getURL("fallback-rates.json")).then(r => r.json());
+  const codes = [...new Set([...Object.keys(bundled.rates || {}), ...Object.keys(local.rates || {})])].sort();
+  let selected = PC.suggestedCurrency(navigator.languages, codes);
+  const suggestion = selected;
+  $("setupHint").textContent = suggestion ? "Suggested from your browser language. Change it anytime." : "Choose the currency you shop in.";
+  const select = $("setupCurrency");
+  const button = $("startConverting");
+  function filter() {
+    const query = $("currencySearch").value.trim().toLocaleLowerCase();
+    const matches = codes.filter(code => `${code} ${UI.currencyName(code)}`.toLocaleLowerCase().includes(query));
+    if (!query && suggestion) matches.sort((a,b) => (b === suggestion) - (a === suggestion) || a.localeCompare(b));
+    select.replaceChildren(...matches.map(code => {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = `${code} — ${UI.currencyName(code)}`;
+      return option;
+    }));
+    select.value = matches.includes(selected) ? selected : "";
+    button.disabled = !select.value;
+    $("currencyResults").textContent = matches.length ? "" : "No matches. Try a currency name or code.";
+  }
+  $("currencySearch").oninput = filter;
+  select.onchange = () => {
+    selected = select.value;
+    button.disabled = !selected;
+  };
+  button.onclick = async () => {
+    if (!codes.includes(select.value)) return;
+    button.disabled = true;
+    button.textContent = "Saving…";
+    $("setupError").hidden = true;
+    const result = await PC.saveSync({ target: select.value, currencyConfirmed: true });
+    if (result.ok) location.reload();
+    else {
+      $("setupError").textContent = "Could not save. Try again.";
+      $("setupError").hidden = false;
+      button.disabled = false;
+      button.textContent = "Start converting";
+    }
+  };
+  filter();
+}
+
 async function main() {
   UI.version();
+  cfg = PC.settings(await chrome.storage.sync.get(null));
+  if (!cfg.currencyConfirmed) {
+    await setupCurrency();
+    return;
+  }
+  $("conversionPanel").hidden = false;
   $("settings").onclick = () =>
     chrome.runtime.openOptionsPage().catch(UI.startupError);
   $("report").onclick = () => UI.openReport(tabId).catch(UI.startupError);
-  cfg = PC.settings(await chrome.storage.sync.get(PC.DEFAULTS));
   const local = await renderRates();
   const codes = Object.keys(local.rates || {});
   UI.currencies(
@@ -177,4 +229,12 @@ async function main() {
       renderRates().catch(() => {});
   });
 }
-main().catch(UI.startupError);
+main().catch(() => {
+  $("currencySetup").hidden = false;
+  $("conversionPanel").hidden = true;
+  $("setupError").textContent = "Could not load your preferences. Try again.";
+  $("setupError").hidden = false;
+  $("startConverting").textContent = "Try again";
+  $("startConverting").disabled = false;
+  $("startConverting").onclick = () => location.reload();
+});

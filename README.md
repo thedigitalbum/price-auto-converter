@@ -4,7 +4,9 @@ Convert supported prices into a familiar currency while browsing. Amounts are es
 
 [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/price-auto-converter/jppiccnoanaeefjhmcdloolkdknhanej) · [Changelog](CHANGELOG.md) · [Privacy](PRIVACY.md) · [Report an issue](https://github.com/thedigitalbum/price-auto-converter/issues)
 
-**Published:** v1.1.2. **Next update:** v1.1.3, available for manual testing; not yet submitted to the Chrome Web Store.
+**Published:** v1.1.2. **Next update:** v1.1.4, available for manual testing; not yet submitted to the Chrome Web Store.
+
+On a fresh install, open the extension and confirm your shopping currency. An explicit region in Chrome's language preferences supplies a suggestion; otherwise choose from the searchable list. Conversion starts after confirmation. Existing installations retain their saved currency, and no location permission or lookup is used.
 
 ## Features
 

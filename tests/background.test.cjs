@@ -17,6 +17,7 @@ const validRates = {
 };
 function worker(fetcher) {
   const data = {},
+    sync = {},
     listeners = {},
     events = [];
   const chrome = {
@@ -28,12 +29,12 @@ function worker(fetcher) {
           ),
         set: async (values) => Object.assign(data, values),
       },
-      sync: { remove: async () => {} },
+      sync: { remove: async () => {}, get: async () => ({...sync}), set: async values => Object.assign(sync, values) },
     },
     runtime: {
       id: "test",
       getURL: (p) => "chrome-extension://test/" + p,
-      openOptionsPage: async () => {},
+      openOptionsPage: async () => { events.push('options-opened'); },
       onInstalled: { addListener: (fn) => (listeners.install = fn) },
       onStartup: { addListener: (fn) => (listeners.startup = fn) },
       onMessage: { addListener: (fn) => (listeners.message = fn) },
@@ -61,11 +62,28 @@ function worker(fetcher) {
   );
   return {
     data,
+    sync,
     listeners,
     events,
     run: (code) => vm.runInContext(code, context),
   };
 }
+
+test('Install waits for currency confirmation and upgrades preserve old defaults', async () => {
+  for (const [reason, initial, expected] of [
+    ['install',{}, {currencyConfirmed:false}],
+    ['install',{target:'CAD'},{target:'CAD'}],
+    ['update',{}, {target:'PHP',currencyConfirmed:true}],
+    ['update',{target:'JPY',enabled:false},{target:'JPY',enabled:false}],
+    ['update',{currencyConfirmed:false},{currencyConfirmed:false}],
+  ]) {
+    const w=worker(async()=>{throw Error('offline');});
+    Object.assign(w.sync,initial);w.listeners.install({reason});
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(w.sync,expected);
+    assert.equal(w.events.includes('options-opened'),false);
+  }
+});
 test("Network rates reject invalid entries and wrong bases", () => {
   const w = worker();
   assert.equal(

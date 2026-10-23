@@ -306,6 +306,7 @@ const PC = (() => {
   }
   function settings(raw = {}) {
     const cfg = { ...DEFAULTS, ...raw };
+    cfg.currencyConfirmed = raw.currencyConfirmed !== false && /^[A-Z]{3}$/.test(raw.target || '');
     cfg.target = /^[A-Z]{3}$/.test(cfg.target) ? cfg.target : DEFAULTS.target;
     for (const key of ['enabled','whole','debug']) cfg[key] = typeof cfg[key] === 'boolean' ? cfg[key] : DEFAULTS[key];
     cfg.fxBuffer = Number.isFinite(Number(cfg.fxBuffer)) ? Math.min(5, Math.max(0, Number(cfg.fxBuffer))) : 0;
@@ -316,5 +317,20 @@ const PC = (() => {
     return cfg;
   }
 
-  return { DEFAULTS, FAMILY, clean, hasCurrency, saveSync, tooBig, find, bare, isBareNumber, isFragment, render, rate, convert, formatMoney, formatRate, locale, settings, hostLines, hostMatches, siteEnabled, toggleSite };
+  // Use explicit language regions only; a language alone is not a location.
+  function suggestedCurrency(languages, supported) {
+    const regions = Object.fromEntries(('US:USD PH:PHP GB:GBP CA:CAD AU:AUD NZ:NZD JP:JPY CN:CNY TW:TWD HK:HKD SG:SGD MY:MYR TH:THB ID:IDR VN:VND KR:KRW IN:INR PK:PKR BD:BDT LK:LKR NP:NPR AE:AED SA:SAR QA:QAR KW:KWD BH:BHD OM:OMR IL:ILS TR:TRY ZA:ZAR NG:NGN KE:KES GH:GHS EG:EGP MA:MAD CH:CHF LI:CHF NO:NOK SE:SEK DK:DKK IS:ISK PL:PLN CZ:CZK HU:HUF RO:RON UA:UAH BR:BRL MX:MXN AR:ARS CL:CLP CO:COP PE:PEN UY:UYU CR:CRC PA:PAB').split(' ').map(x => x.split(':')));
+    for (const region of 'AT BE CY DE EE ES FI FR GR HR IE IT LT LU LV MT NL PT SI SK'.split(' ')) regions[region] = 'EUR';
+    for (const language of languages || []) {
+      try {
+        const region = new Intl.Locale(language).region;
+        if (!region) continue;
+        const code = regions[region];
+        return supported.includes(code) ? code : '';
+      } catch { /* Ignore malformed language tags. */ }
+    }
+    return '';
+  }
+
+  return { DEFAULTS, FAMILY, clean, hasCurrency, saveSync, tooBig, find, bare, isBareNumber, isFragment, render, rate, convert, formatMoney, formatRate, locale, settings, suggestedCurrency, hostLines, hostMatches, siteEnabled, toggleSite };
 })();
