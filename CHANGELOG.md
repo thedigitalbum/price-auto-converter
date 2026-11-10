@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.1.4 — Unreleased
+## 1.1.4
+
+Final submission candidate prepared 23 October 2026; source synchronized through PR #3. See [release notes and package verification](docs/releases/1.1.4.md).
 
 - Recognize Noon's custom dirham symbol in AED price elements, including order history.
 - Use the approved Midnight Tokyo icon at all extension sizes.
@@ -10,7 +12,7 @@
 - Keep setup inside the popup instead of opening Settings automatically after installation.
 - Include the Amazon deal-price fix from the v1.1.3 test build.
 
-## 1.1.3 — Unreleased
+## 1.1.3 — Test build; incorporated into 1.1.4
 
 ### Fixed
 - Convert Amazon deal-card amounts with “Deal Price,” “List Price” and “Typical” accessibility labels.
@@ -22,7 +24,7 @@
 
 ### Validation
 - Conversion regression tests passed on Google Chrome 113 and 155, including dynamic price updates, restoration and conversion stability.
-- Manual verification on Amazon's live deals page is pending.
+- The owner confirmed the Amazon live-page check; the fix is included in 1.1.4.
 
 ## 1.1.2
 - Fix repeated Amazon price conversion by excluding converted prices from source-currency detection and restarting only when the effective currency changes
