@@ -1,4 +1,4 @@
-> **Publication update — 10 November 2026:** Price Auto Converter is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/price-auto-converter/jppiccnoanaeefjhmcdloolkdknhanej). The instructions and test results below are historical preparation records. Statements about pending submission describe the status at the time, not the current publication status. `main` remains at 1.1.2; 1.1.4 source is in [draft PR #3](https://github.com/thedigitalbum/price-auto-converter/pull/3), pending comparison with the published package. See the [README](../README.md) for current installation and source status.
+> **Source synchronization — 11 November 2026:** Price Auto Converter is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/price-auto-converter/jppiccnoanaeefjhmcdloolkdknhanej). Version 1.1.4 source matches the final 23 October submission candidate; see [release notes and verification](releases/1.1.4.md). The preparation instructions and results below are historical. Statements about pending submission describe their original date, not current publication status.
 
 # Historical Chrome Web Store submission guide — 1.1.2
 

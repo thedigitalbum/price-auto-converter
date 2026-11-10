@@ -76,6 +76,7 @@ test(
       });
       await chrome.storage.sync.set({
         target: "PHP",
+        currencyConfirmed: true,
         enabled: true,
         excluded: "",
         included: "",

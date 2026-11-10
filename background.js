@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Harry Rama. MIT License (see LICENSE).
-// Fetches and caches exchange rates (base USD). Opens settings on icon click.
+// Fetches and caches exchange rates (base USD).
 importScripts(
   "diagnostics.js",
   "report-core.js",
@@ -159,7 +159,19 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
   // keys used by earlier versions (replaced by dollarMode / yenMode, and the removed "convert anyway" list)
   chrome.storage.sync.remove(["dollar", "yen", "forced"]).catch(() => {});
   seedFallbackIfEmpty().then(() => refreshRates().catch(() => {}));
-  if (reason === "install") chrome.runtime.openOptionsPage();
+  if (reason === "install") {
+    chrome.storage.sync.get(["target"]).then((saved) => {
+      if (!/^[A-Z]{3}$/.test(saved.target || ""))
+        return chrome.storage.sync.set({ currencyConfirmed: false });
+    }).catch(() => {});
+  }
+  // Older installations could use PHP without ever saving a target.
+  if (reason === "update") {
+    chrome.storage.sync.get(["target", "currencyConfirmed"]).then((saved) => {
+      if (!saved.target && saved.currencyConfirmed === undefined)
+        return chrome.storage.sync.set({ target: "PHP", currencyConfirmed: true });
+    }).catch(() => {});
+  }
 });
 
 chrome.runtime.onStartup.addListener(async () => {

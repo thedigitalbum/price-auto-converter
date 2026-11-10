@@ -6,7 +6,7 @@ const root = process.env.SOURCE_DIR || path.join(__dirname, '..');
 const {browserOptions,verifyBrowser}=require('./browser.cjs');
 const browserReady = chromium.launch({ headless: true,...browserOptions() }).then(async b=>{await verifyBrowser(b);return b;});
 after(async () => (await browserReady).close());
-const rates = { USD: 1, PHP: 56, CAD: 1.4, MYR: 4, TRY: 40, NGN: 1600, CLP: 1000, COP: 4000, HKD: 8, EUR: 0.9, KWD: 0.3, PLN: 4 };
+const rates = { USD: 1, PHP: 56, AED: 4, CAD: 1.4, MYR: 4, TRY: 40, NGN: 1600, CLP: 1000, COP: 4000, HKD: 8, EUR: 0.9, KWD: 0.3, PLN: 4 };
 async function fixture(t, body, { url = 'https://shop.example/', currency = 'USD' } = {}) {
   const page = await (await browserReady).newPage({ locale: 'en-US' });
   t.after(() => page.close());
@@ -40,6 +40,26 @@ async function text(page, selector, expected) {
     await page.waitForFunction(({ selector, expected }) => document.querySelector(selector)?.textContent.replace(/\s+/g, ' ').trim() === expected, { selector, expected }, { timeout: 7000 });
   } catch (e) { throw new Error(`${selector}: expected ${expected}; got ${await page.textContent(selector)}`, { cause: e }); }
 }
+
+test('Noon private-use dirham prices convert, update and restore', async t => {
+  const p = await fixture(t, '<p id="amount" class="OrderItem-module-scss-module__example__productPrice">\uE001\u202f89.00</p><p id="plain">\uE001 100.00</p>', { url: 'https://account.noon.com/uae-en/orders/', currency: 'AED' });
+  await text(p, '#amount', '≈ ₱1,246.00');
+  await text(p, '#plain', '\uE001 100.00');
+  await p.evaluate(() => document.querySelector('#amount').textContent = '\uE001\u202f144.40');
+  await text(p, '#amount', '≈ ₱2,021.60');
+  await p.waitForTimeout(1200);
+  await text(p, '#amount', '≈ ₱2,021.60');
+  await p.evaluate(() => setSettings({ enabled: false }));
+  await text(p, '#amount', '\uE001 144.40');
+});
+
+test('Private-use glyph is not a currency outside Noon AED prices', async t => {
+  for (const [url, currency] of [['https://shop.example/', 'AED'], ['https://noon.com.example/', 'AED'], ['https://account.noon.com/saudi-en/orders/', 'USD']]) {
+    const p = await fixture(t, '<p id="amount" class="price">\uE001 89.00</p>', { url, currency });
+    await p.waitForTimeout(500);
+    await text(p, '#amount', '\uE001 89.00');
+  }
+});
 
 test('Editing fields, code and Amazon-style prices inside editors stay untouched',async t=>{
  const p=await fixture(t,'<div contenteditable="plaintext-only" id="edit">USD 100<div class="a-price"><span class="a-offscreen">$10</span><span aria-hidden="true">$10</span></div></div><textarea>USD 100</textarea><code id="code">USD 100</code><p id="price" class="price-private-account">USD 100</p>');
@@ -120,6 +140,25 @@ test('Amazon source updates re-convert and restore latest value', async t => {
   await text(p, '#az .a-offscreen', '$29.99');
   await text(p, '#az [aria-hidden]', '$29.99');
 });
+test('Amazon deals labels convert, stay stable, update and restore', async t => {
+  const labels = ['Deal Price:', 'List Price', 'Typical:'];
+  const p = await fixture(t, labels.map((label, i) => `<span class="a-price" id="deal${i}"><span class="a-offscreen">${label} $30.99</span><span aria-hidden="true"><span class="a-price-symbol">$</span><span class="a-price-whole">30<span class="a-price-decimal">.</span></span><span class="a-price-fraction">99</span></span></span>`).join(''), {url:'https://www.amazon.com/events/deals/'});
+  for (let i=0;i<labels.length;i++) {
+    await text(p, `#deal${i} [aria-hidden]`, '≈ ₱1,735.44');
+    await text(p, `#deal${i} .a-offscreen`, labels[i]+' ≈ ₱1,735.44');
+  }
+  await p.evaluate(()=>window.savedDealMarker=document.querySelector('#deal0 [data-pc]'));
+  await p.waitForTimeout(4500);
+  assert.equal(await p.evaluate(()=>window.savedDealMarker===document.querySelector('#deal0 [data-pc]')),true);
+  await p.evaluate(()=>document.querySelector('#deal0 .a-offscreen').textContent='Deal Price: $40.99');
+  await text(p, '#deal0 [aria-hidden]', '≈ ₱2,295.44');
+  await p.evaluate(()=>setSettings({enabled:false}));
+  await text(p, '#deal0 .a-offscreen', 'Deal Price: $40.99');
+  await text(p, '#deal0 [aria-hidden]', '$40.99');
+  await text(p, '#deal1 .a-offscreen', 'List Price $30.99');
+  assert.equal(await p.locator('#deal1 .a-price-fraction').count(),1);
+});
+
 test('Ordinary dynamic updates and long paragraphs convert', async t => {
   const p = await fixture(t, '<p id="price">USD 100</p><p id="long">' + 'Ordinary text. '.repeat(400) + 'USD 100</p>');
   await text(p, '#price', '≈ ₱5,600.00');

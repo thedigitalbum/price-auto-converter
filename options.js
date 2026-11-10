@@ -117,7 +117,7 @@ async function main() {
     $("dollarMode").append(o);
   }
   const [s, l] = await Promise.all([
-    chrome.storage.sync.get(PC.DEFAULTS),
+    chrome.storage.sync.get(null),
     chrome.storage.local.get([
       "rates",
       "ratesUpdated",
@@ -127,6 +127,10 @@ async function main() {
     ]),
   ]);
   cfg = PC.settings(s);
+  if (!cfg.currencyConfirmed) {
+    location.replace(chrome.runtime.getURL("popup.html"));
+    return;
+  }
   local = l;
   rates = l.rates || null;
   renderForm();

@@ -4,9 +4,9 @@ Convert supported prices into a familiar currency while browsing. Amounts are es
 
 [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/price-auto-converter/jppiccnoanaeefjhmcdloolkdknhanej) · [Changelog](CHANGELOG.md) · [Privacy](PRIVACY.md) · [Report an issue](https://github.com/thedigitalbum/price-auto-converter/issues)
 
-**Available on the Chrome Web Store.** Use the store link above for the published installation.
+**Current source version: 1.1.4.** The extension is available on the Chrome Web Store. This source matches the final 23 October 2026 submission candidate, allowing for line-ending differences. See [1.1.4 release notes](docs/releases/1.1.4.md) for changes and package verification.
 
-**Source status:** `main` currently contains version **1.1.2**. Version **1.1.4** is present on [`release/1.1.3`](https://github.com/thedigitalbum/price-auto-converter/tree/release/1.1.3) in [draft pull request #3](https://github.com/thedigitalbum/price-auto-converter/pull/3). The branch name predates its 1.1.4 changes. Matching that branch to the published ZIP is still pending; the version number alone does not establish that they contain identical code.
+On a fresh install, open the extension and confirm your shopping currency. An explicit region in Chrome's language preferences supplies a suggestion; otherwise choose from the searchable list. Conversion starts after confirmation. Existing installations retain their saved currency, and no location permission or lookup is used.
 
 ## Features
 
@@ -21,7 +21,7 @@ Convert supported prices into a familiar currency while browsing. Amounts are es
 1. Extract the release ZIP to a permanent folder.
 2. Open `chrome://extensions`, enable Developer mode and choose **Load unpacked**.
 3. Select the extracted folder containing `manifest.json`.
-4. Pick your currency in Settings. If another copy is installed, disable it so only one copy converts prices.
+4. Open the extension popup and confirm your shopping currency. If another copy is installed, disable it so only one copy converts prices.
 
 For a new test build, extract it to a separate folder and load that folder. Disable older copies, including the Web Store installation, then refresh shopping tabs. A newly loaded folder may have a different extension ID and separate settings.
 
@@ -57,7 +57,7 @@ Automatic conversion across shopping sites requires access to webpage content. C
 
 ## Chrome compatibility
 
-Desktop Google Chrome **113.0.5672.63 or later**. The repository's 1.1.2 validation record reports tests on official Chrome for Testing 113.0.5672.63 and 155.0.8059.84. These are historical results, not a new test run or verification of the current store package. See [Chrome version evidence](docs/CHROME_COMPATIBILITY.md).
+Desktop Google Chrome **113.0.5672.63 or later**. The 1.1.4 source has a complete passing GitHub Actions run for both minimum and stable Chrome. The owner also confirmed live-page checks for the Amazon fix and, on 23 October 2026, the Noon fix. These checks do not establish compatibility with every shopping site. See [release verification](docs/releases/1.1.4.md) and [Chrome version evidence](docs/CHROME_COMPATIBILITY.md).
 
 ## Development and validation
 
