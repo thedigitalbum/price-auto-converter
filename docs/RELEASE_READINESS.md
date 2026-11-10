@@ -1,4 +1,6 @@
-# Current release: 1.1.2 — 20 October 2026
+> **Publication update — 10 November 2026:** Price Auto Converter is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/price-auto-converter/jppiccnoanaeefjhmcdloolkdknhanej). The instructions and test results below are historical preparation records. Statements about pending submission describe the status at the time, not the current publication status. `main` remains at 1.1.2; 1.1.4 source is in [draft PR #3](https://github.com/thedigitalbum/price-auto-converter/pull/3), pending comparison with the published package. See the [README](../README.md) for current installation and source status.
+
+# Historical release preparation: 1.1.2 — 20 October 2026
 
 The owner approved the final Chrome pilot and requested GitHub finalization, a fresh submission kit, listing creation and review submission. The final extracted artifact passed all 93 tests on official Chrome 113.0.5672.63 and 155.0.8059.84, including Amazon price-to-pay, original-currency evidence, idle stability, metadata churn, real currency changes, popup/inline reporting, delivery failure cases, private collector sanitization and migration. Live Google receipt, deduplication, Sheet storage, readable Philippine-time timestamps and Gmail JSON digest delivery were verified. The next scheduled daily trigger run has not yet been observed.
 

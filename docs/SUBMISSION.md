@@ -1,4 +1,6 @@
-# Chrome Web Store submission — 1.1.2
+> **Publication update — 10 November 2026:** Price Auto Converter is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/price-auto-converter/jppiccnoanaeefjhmcdloolkdknhanej). The instructions and test results below are historical preparation records. Statements about pending submission describe the status at the time, not the current publication status. `main` remains at 1.1.2; 1.1.4 source is in [draft PR #3](https://github.com/thedigitalbum/price-auto-converter/pull/3), pending comparison with the published package. See the [README](../README.md) for current installation and source status.
+
+# Historical Chrome Web Store submission guide — 1.1.2
 
 Prepared 20 October 2026 after the owner approved the Chrome pilot and final Amazon stability fixes. Developer registration and payment are complete. Publisher: Harry Rama. Support: thedigitalbum@gmail.com. The dashboard has not been filled or submitted by this work: Chrome blocks browser automation of the extensions gallery.
 
